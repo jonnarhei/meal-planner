@@ -7,7 +7,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 func GetString(key, fallback string) string {
 	err := godotenv.Load()
 
@@ -16,6 +15,10 @@ func GetString(key, fallback string) string {
 	}
 
 	val := os.Getenv(key)
+
+	if val == "" {
+		return fallback
+	}
 
 	return val
 }
