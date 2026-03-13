@@ -2,9 +2,12 @@ package main
 
 import (
 	"log"
-	"meal-planner-demo-backend/internal/db"
-	"meal-planner-demo-backend/internal/env"
-	"meal-planner-demo-backend/internal/store"
+	"log/slog"
+	"os"
+
+	"github.com/jonnarhei/meal-planner/backend/internal/database"
+	"github.com/jonnarhei/meal-planner/backend/internal/env"
+	"github.com/jonnarhei/meal-planner/backend/internal/store"
 )
 
 func main() {
@@ -19,7 +22,7 @@ func main() {
 		},
 	}
 
-	db, err := db.New(
+	db, err := database.New(
 		cfg.db.addr,
 		cfg.db.maxOpenConns,
 		cfg.db.maxIdleConns,
@@ -37,10 +40,16 @@ func main() {
 
 	app := &application{
 		config: cfg,
-		store:  store,
+		store:  *store,
 	}
 
-	mux := app.mount()
+	
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	log.Fatal(app.run(mux))
+	mux := app.mount()
+	if err := app.run(mux); err != nil {
+		slog.Error("server failed to start", "error", err)
+		os.Exit(1)
+	}
 }

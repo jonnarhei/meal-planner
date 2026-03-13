@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"meal-planner-demo-backend/internal/store"
+	"github.com/jonnarhei/meal-planner/backend/internal/store"
 	"net/http"
 	"time"
 
@@ -28,20 +28,18 @@ type dbConfig struct {
 }
 
 func (app *application) mount() http.Handler {
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
-	r.Use(middleware.Timeout(60 * time.Second))
+	router.Use(middleware.Timeout(60 * time.Second))
 
-	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthCheckHandler)
-	})
+	router.Get("/health", app.healthCheckHandler)
 
-	return r
+	return router
 }
 
 func (app *application) run(mux http.Handler) error {
@@ -53,7 +51,7 @@ func (app *application) run(mux http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Printf("Server has started at %s", app.config.addr)
+	log.Printf("Server has started at %s", srv.Addr)
 
 	return srv.ListenAndServe()
 }

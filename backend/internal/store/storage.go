@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"meal-planner-demo-backend/internal/store/models"
+	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
 type Storage struct {
@@ -12,8 +12,8 @@ type Storage struct {
 	}
 }
 
-func NewStorage(db *sql.DB) Storage {
-	return Storage{
+func NewStorage(db *sql.DB) *Storage {
+	return &Storage{
 		Users: &UsersStore{db},
 	}
 }

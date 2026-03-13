@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"meal-planner-demo-backend/internal/store/models"
+	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
 type UsersStore struct {
