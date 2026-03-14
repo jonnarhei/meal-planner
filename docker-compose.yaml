@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: mealplanner-postgres
+    environment:
+      POSTGRES_DB: mealplanner
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: adminpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - mealplanner_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mealplanner_pgdata:

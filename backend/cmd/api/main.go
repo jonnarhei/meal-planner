@@ -1,17 +1,21 @@
 package main
 
 import (
-	"log"
 	"log/slog"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/jonnarhei/meal-planner/backend/internal/database"
 	"github.com/jonnarhei/meal-planner/backend/internal/env"
 	"github.com/jonnarhei/meal-planner/backend/internal/store"
 )
 
 func main() {
+	_ = godotenv.Load()
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	
 	cfg := config{
 		addr: env.GetString("ADDR", ":8080"),
 		db: dbConfig{
@@ -30,11 +34,11 @@ func main() {
 	)
 
 	if err != nil {
-		log.Panic(err)
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
 	}
-
 	defer db.Close()
-	log.Println("Database connection pool established")
+	slog.Info("Database connection pool established")
   
 	store := store.NewStorage(db)
 
@@ -42,10 +46,6 @@ func main() {
 		config: cfg,
 		store:  *store,
 	}
-
-	
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
 
 	mux := app.mount()
 	if err := app.run(mux); err != nil {

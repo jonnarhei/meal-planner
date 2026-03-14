@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"github.com/jonnarhei/meal-planner/backend/internal/store"
 	"net/http"
 	"time"
@@ -39,6 +39,11 @@ func (app *application) mount() http.Handler {
 
 	router.Get("/health", app.healthCheckHandler)
 
+	router.Route("/users", func(r chi.Router) {
+		r.Get("/", app.ListUsersHandler)
+		r.Post("/", app.registerUserHandler)
+	})
+
 	return router
 }
 
@@ -51,7 +56,7 @@ func (app *application) run(mux http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Printf("Server has started at %s", srv.Addr)
+	slog.Info("Server has started at", "addr", srv.Addr)
 
 	return srv.ListenAndServe()
 }

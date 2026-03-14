@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
@@ -31,4 +32,40 @@ func (u *UsersStore) Create(ctx context.Context, user *models.User) error {
 	}
 
 	return nil
+}
+
+func (u *UsersStore) ListUsers(ctx context.Context) ([]models.User, error) {
+	query := `
+	SELECT id, email, password, created_at FROM users
+	`
+
+	rows, err := u.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+
+	for rows.Next() {
+		var user models.User
+		err:= rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.Password,
+			&user.CreatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

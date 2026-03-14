@@ -1,0 +1,12 @@
+-- +goose Up
+CREATE EXTENSION IF NOT EXISTS citext;
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    email CITEXT UNIQUE NOT NULL,
+    password BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- +goose Down
+DROP TABLE IF EXISTS users;
