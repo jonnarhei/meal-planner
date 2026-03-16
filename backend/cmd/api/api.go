@@ -2,9 +2,10 @@ package main
 
 import (
 	"log/slog"
-	"github.com/jonnarhei/meal-planner/backend/internal/store"
 	"net/http"
 	"time"
+
+	"github.com/jonnarhei/meal-planner/backend/internal/store"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,6 +19,7 @@ type application struct {
 type config struct {
 	addr string
 	db   dbConfig
+	jwt  jwtConfig
 }
 
 type dbConfig struct {
@@ -27,9 +29,15 @@ type dbConfig struct {
 	maxIdleTime  string
 }
 
+type jwtConfig struct {
+	secret string
+	expiry int
+}
+
 func (app *application) mount() http.Handler {
 	router := chi.NewRouter()
 
+	//standard middleware stack from chi
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
@@ -40,8 +48,14 @@ func (app *application) mount() http.Handler {
 	router.Get("/health", app.healthCheckHandler)
 
 	router.Route("/users", func(r chi.Router) {
-		r.Get("/", app.ListUsersHandler)
 		r.Post("/", app.registerUserHandler)
+		r.Post("/login", app.loginUserHandler)
+		
+		r.Group(func(r chi.Router) {
+			r.Use(app.AuthMiddleware)
+			r.Get("/", app.ListUsersHandler)
+			r.Get("/me", app.getMeHandler)
+		})
 	})
 
 	return router

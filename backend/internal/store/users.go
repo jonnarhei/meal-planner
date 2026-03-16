@@ -69,3 +69,25 @@ func (u *UsersStore) ListUsers(ctx context.Context) ([]models.User, error) {
 
 	return users, nil
 }
+
+
+func (u *UsersStore) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+	query := `
+	SELECT id, email, password, created_at FROM users
+	WHERE email = $1
+	`
+
+	user := &models.User{}
+	err := u.db.QueryRowContext(ctx, query, email).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Password,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}

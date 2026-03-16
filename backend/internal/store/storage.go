@@ -10,6 +10,7 @@ type Storage struct {
 	Users interface {
 		Create(context.Context, *models.User) error
 		ListUsers(context.Context) ([]models.User, error)
+		GetByEmail(context.Context, string) (*models.User, error)
 	}
 }
 

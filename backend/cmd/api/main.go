@@ -24,6 +24,10 @@ func main() {
 			maxIdleConns: env.GetInt("DB_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
+		jwt: jwtConfig{
+			secret: env.GetString("JWT_SECRET", "changeme"),
+			expiry: env.GetInt("JWT_EXPIRY", 86400),
+		},
 	}
 
 	db, err := database.New(
