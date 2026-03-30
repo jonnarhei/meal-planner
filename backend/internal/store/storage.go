@@ -12,10 +12,15 @@ type Storage struct {
 		ListUsers(context.Context) ([]models.User, error)
 		GetByEmail(context.Context, string) (*models.User, error)
 	}
+	Mealplans interface {
+		Create(context.Context, *models.MealPlan) error
+		GetCurrent(context.Context, int64) (*models.MealPlan, error)
+	}
 }
 
 func NewStorage(db *sql.DB) *Storage {
 	return &Storage{
 		Users: &UsersStore{db},
+		Mealplans: &MealPlanStore{db},
 	}
 }

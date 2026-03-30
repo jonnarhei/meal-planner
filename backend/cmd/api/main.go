@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/jonnarhei/meal-planner/backend/internal/database"
 	"github.com/jonnarhei/meal-planner/backend/internal/env"
+	"github.com/jonnarhei/meal-planner/backend/internal/spoonacular"
 	"github.com/jonnarhei/meal-planner/backend/internal/store"
 )
 
@@ -46,9 +47,12 @@ func main() {
   
 	store := store.NewStorage(db)
 
+	spoonacularClient := spoonacular.NewClient(env.GetString("SPOONACULAR_API_KEY", ""))
+
 	app := &application{
 		config: cfg,
 		store:  *store,
+		spoonacular: *spoonacularClient,
 	}
 
 	mux := app.mount()

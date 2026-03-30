@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/mail"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/auth"
 	"github.com/jonnarhei/meal-planner/backend/internal/jsonutil"
@@ -16,11 +17,26 @@ type registerUserPayload struct {
 	Password string `json:"password"`
 }
 
+func isValidEmail(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
+}
+
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var payload registerUserPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		jsonutil.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if !isValidEmail(payload.Email) {
+		jsonutil.WriteError(w, "invalid email format", http.StatusBadRequest)
+		return
+	}
+
+	if len(payload.Password) < 8 {
+		jsonutil.WriteError(w, "password is too short", http.StatusBadRequest)
+		return 
 	}
 
 	user := &models.User{
@@ -28,13 +44,14 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := user.SetPassword(payload.Password); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		slog.Error("failed to create user", "error", err)
+		jsonutil.WriteError(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	if err := app.store.Users.Create(r.Context(), user); err != nil {
 		slog.Error("failed to create user", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		jsonutil.WriteError(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -49,7 +66,7 @@ func (app *application) ListUsersHandler(w http.ResponseWriter, r *http.Request)
 	users, err := app.store.Users.ListUsers(r.Context())
 	if err != nil {
 		slog.Error("failed to list users", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		jsonutil.WriteError(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -64,26 +81,26 @@ type loginUserPayload struct {
 func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var payload loginUserPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		jsonutil.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := app.store.Users.GetByEmail(r.Context(), payload.Email)
 	if err != nil {
 		slog.Error("failed to get user by email", "error", err)
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		jsonutil.WriteError(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	if !user.CheckPassword(payload.Password) {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		jsonutil.WriteError(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	token, err := auth.GenerateToken(user.ID, user.Email, app.config.jwt.secret, app.config.jwt.expiry)
 	if err != nil {
 		slog.Error("failed to generate token", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		jsonutil.WriteError(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 

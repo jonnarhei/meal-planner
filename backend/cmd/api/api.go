@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jonnarhei/meal-planner/backend/internal/spoonacular"
 	"github.com/jonnarhei/meal-planner/backend/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -14,6 +15,7 @@ import (
 type application struct {
 	config config
 	store  store.Storage
+	spoonacular spoonacular.Client
 }
 
 type config struct {
@@ -56,6 +58,11 @@ func (app *application) mount() http.Handler {
 			r.Get("/", app.ListUsersHandler)
 			r.Get("/me", app.getMeHandler)
 		})
+	})
+
+	router.Route("/meal-plans", func(r chi.Router) {
+		r.Use(app.AuthMiddleware)
+		r.Get("/current", app.getCurrentMealPlanHandler)
 	})
 
 	return router

@@ -41,3 +41,31 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, target
 
 	return json.NewDecoder(resp.Body).Decode(target)
 }
+
+type Recipe struct {
+	RecipeID int64  `json:"id"`
+	Title    string `json:"title"`
+	Image    string `json:"image"`
+	URL      string `json:"sourceUrl"`
+}
+
+type RandomRecipeResponse struct {
+	Recipes []Recipe `json:"recipes"`
+}
+
+
+func (c *Client) GetRandomRecipes(ctx context.Context) (*RandomRecipeResponse, error) {
+	var response RandomRecipeResponse
+
+	params := url.Values{}
+	params.Set("number", "7")
+	params.Set("include-tags", "main course")
+
+	err := c.get(ctx, "/recipes/random", params, &response)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
