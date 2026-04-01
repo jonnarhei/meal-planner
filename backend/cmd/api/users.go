@@ -36,7 +36,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 
 	if len(payload.Password) < 8 {
 		jsonutil.WriteError(w, "password is too short", http.StatusBadRequest)
-		return 
+		return
 	}
 
 	user := &models.User{
@@ -109,11 +109,10 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-
 func (app *application) getMeHandler(w http.ResponseWriter, r *http.Request) {
 	claims := getUserFromContext(r)
 	jsonutil.WriteHttpJson(w, http.StatusOK, map[string]any{
-		"id": claims.UserID,
+		"id":    claims.UserID,
 		"email": claims.Email,
 	})
 }

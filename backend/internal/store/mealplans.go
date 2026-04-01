@@ -13,7 +13,7 @@ type MealPlanStore struct {
 
 func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) error {
 	tx, err := m.db.BeginTx(ctx, nil)
-	
+
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,6 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 		return err
 	}
 
-
 	// 2. insert recipes
 	for _, recipe := range mealPlan.Recipes {
 		query := `
@@ -65,16 +64,14 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 	return tx.Commit()
 }
 
-
-
 func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.MealPlan, error) {
 	//get mealplan
 	query := `
-	SELECT id, start_date, end_date, created_at 
-	FROM meal_plan
+	SELECT id, user_id, start_date, end_date, created_at 
+	FROM meal_plans
 	WHERE user_id = $1
-	AND start_date <= NOW()
-	AND end_date >= NOW()
+	AND start_date <= CURRENT_DATE
+	AND end_date >= CURRENT_DATE
 	LIMIT 1
 	`
 
@@ -108,13 +105,13 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 		err := rows.Scan(
 			&recipe.ID,
 			&recipe.MealPlanID,
-			recipe.RecipeID,
-			recipe.RecipeTitle,
-			recipe.Image,
-			recipe.SourceURL,
-			recipe.Day,
+			&recipe.RecipeID,
+			&recipe.RecipeTitle,
+			&recipe.Image,
+			&recipe.SourceURL,
+			&recipe.Day,
 		)
-		
+
 		if err != nil {
 			return nil, err
 		}
@@ -127,4 +124,30 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 	}
 
 	return plan, nil
+}
+
+func (m *MealPlanStore) UpdateRecipeForDay(ctx context.Context, recipe *models.MealPlanRecipe) error {
+	query := `
+	UPDATE meal_plan_recipes
+	SET recipe_id = $1, recipe_title = $2, image = $3, source_url = $4
+	WHERE meal_plan_id = $5 AND day = $6
+	`
+
+	_, err := m.db.ExecContext(ctx, query,
+		recipe.RecipeID, recipe.RecipeTitle, recipe.Image, recipe.SourceURL, recipe.MealPlanID, recipe.Day,
+	)
+
+	return err
+}
+
+func (m *MealPlanStore) DeleteCurrent(ctx context.Context, userID int64) error {
+	query := `
+	DELETE FROM meal_plans
+	WHERE user_id = $1
+	AND start_date <= CURRENT_DATE
+	AND end_date >= CURRENT_DATE
+	`
+
+	_, err := m.db.ExecContext(ctx, query, userID)
+	return err
 }

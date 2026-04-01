@@ -49,7 +49,7 @@ func (u *UsersStore) ListUsers(ctx context.Context) ([]models.User, error) {
 
 	for rows.Next() {
 		var user models.User
-		err:= rows.Scan(
+		err := rows.Scan(
 			&user.ID,
 			&user.Email,
 			&user.Password,
@@ -69,7 +69,6 @@ func (u *UsersStore) ListUsers(ctx context.Context) ([]models.User, error) {
 
 	return users, nil
 }
-
 
 func (u *UsersStore) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `

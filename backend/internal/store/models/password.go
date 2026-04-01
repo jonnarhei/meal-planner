@@ -4,7 +4,7 @@ import "golang.org/x/crypto/bcrypt"
 
 func (u *User) SetPassword(plain string) error {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost)
-	
+
 	if err != nil {
 		return err
 	}

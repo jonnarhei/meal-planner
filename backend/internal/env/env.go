@@ -19,7 +19,7 @@ func GetInt(key string, fallback int) int {
 	valAsString := os.Getenv(key)
 	valAsInt, err := strconv.Atoi(valAsString)
 
-	if (err != nil) {
+	if err != nil {
 		return fallback
 	}
 

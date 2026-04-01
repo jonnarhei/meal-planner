@@ -16,7 +16,7 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
-	
+
 	cfg := config{
 		addr: env.GetString("ADDR", ":8080"),
 		db: dbConfig{
@@ -44,14 +44,14 @@ func main() {
 	}
 	defer db.Close()
 	slog.Info("Database connection pool established")
-  
+
 	store := store.NewStorage(db)
 
 	spoonacularClient := spoonacular.NewClient(env.GetString("SPOONACULAR_API_KEY", ""))
 
 	app := &application{
-		config: cfg,
-		store:  *store,
+		config:      cfg,
+		store:       *store,
 		spoonacular: *spoonacularClient,
 	}
 

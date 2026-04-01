@@ -10,11 +10,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 type application struct {
-	config config
-	store  store.Storage
+	config      config
+	store       store.Storage
 	spoonacular spoonacular.Client
 }
 
@@ -39,6 +40,13 @@ type jwtConfig struct {
 func (app *application) mount() http.Handler {
 	router := chi.NewRouter()
 
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}))
+
 	//standard middleware stack from chi
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -52,7 +60,7 @@ func (app *application) mount() http.Handler {
 	router.Route("/users", func(r chi.Router) {
 		r.Post("/", app.registerUserHandler)
 		r.Post("/login", app.loginUserHandler)
-		
+
 		r.Group(func(r chi.Router) {
 			r.Use(app.AuthMiddleware)
 			r.Get("/", app.ListUsersHandler)
@@ -63,6 +71,8 @@ func (app *application) mount() http.Handler {
 	router.Route("/meal-plans", func(r chi.Router) {
 		r.Use(app.AuthMiddleware)
 		r.Get("/current", app.getCurrentMealPlanHandler)
+		r.Patch("/current/recipe", app.changeRecipeForDay)
+		r.Post("/current/regenerate", app.regenerateMealPlanHandler)
 	})
 
 	return router

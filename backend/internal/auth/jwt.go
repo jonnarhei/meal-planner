@@ -15,10 +15,10 @@ type Claims struct {
 func GenerateToken(userID int64, email string, secret string, expiry int) (string, error) {
 	claims := Claims{
 		UserID: userID,
-		Email: email,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiry) * time.Second)),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 

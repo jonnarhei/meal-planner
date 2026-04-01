@@ -6,19 +6,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
 type Client struct {
 	apiKey     string
 	httpClient *http.Client
-	baseURL	string
+	baseURL    string
 }
 
 func NewClient(apiKey string) *Client {
 	return &Client{
-		apiKey: apiKey,
-		baseURL: "https://api.spoonacular.com",
+		apiKey:     apiKey,
+		baseURL:    "https://api.spoonacular.com",
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -53,12 +54,11 @@ type RandomRecipeResponse struct {
 	Recipes []Recipe `json:"recipes"`
 }
 
-
-func (c *Client) GetRandomRecipes(ctx context.Context) (*RandomRecipeResponse, error) {
+func (c *Client) GetRandomRecipes(ctx context.Context, n int) (*RandomRecipeResponse, error) {
 	var response RandomRecipeResponse
 
 	params := url.Values{}
-	params.Set("number", "7")
+	params.Set("number", strconv.Itoa(n))
 	params.Set("include-tags", "main course")
 
 	err := c.get(ctx, "/recipes/random", params, &response)
@@ -69,3 +69,4 @@ func (c *Client) GetRandomRecipes(ctx context.Context) (*RandomRecipeResponse, e
 
 	return &response, nil
 }
+

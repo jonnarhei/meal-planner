@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
@@ -15,12 +16,14 @@ type Storage struct {
 	Mealplans interface {
 		Create(context.Context, *models.MealPlan) error
 		GetCurrent(context.Context, int64) (*models.MealPlan, error)
+		UpdateRecipeForDay(context.Context, *models.MealPlanRecipe) error
+		DeleteCurrent(context.Context, int64) error
 	}
 }
 
 func NewStorage(db *sql.DB) *Storage {
 	return &Storage{
-		Users: &UsersStore{db},
+		Users:     &UsersStore{db},
 		Mealplans: &MealPlanStore{db},
 	}
 }
