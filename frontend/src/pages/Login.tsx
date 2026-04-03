@@ -2,11 +2,11 @@ import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { Link, useNavigate } from "react-router-dom"
 import { login } from "../api/auth"
+import toast from "react-hot-toast"
 
 function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
     const { setToken } = useAuth()
@@ -15,14 +15,13 @@ function Login() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true) 
-        setError(null)
 
         try {
             const data = await login({email, password})
             setToken(data.token)
             navigate('/meal-plan')
         } catch (err) {
-            setError('Invalid email or password')
+            toast.error('Invalid email or password')
         } finally {
             setLoading(false)
         }
@@ -33,12 +32,6 @@ function Login() {
             <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
                 <h1 className="text-3xl font-bold text-orange-600 mb-2">Meal Planner</h1>
                 <p className="text-gray-500 mb-6">Sign into your account</p>
-
-                {error && (
-                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-ld mb-4 text-sn">
-                        {error}
-                    </div>
-                )}
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4"> 
                     <input

@@ -41,14 +41,14 @@ function HamburgerMenu() {
                 <div className="absolute left-0 top-12 bg-white rounded shadow-lg border border-orange-100 w-48 py-2 z-50">
                     <button 
                         onClick={() => { navigate('/profile'); setOpen(false) }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover: bg-orange-50 transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
                     >
                         Profile
                     </button>
                     <hr className="my-1 border-orange-100" />
                     <button
                         onClick={() => { navigate('/meal-plan'); setOpen(false)}}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover: bg-orange-50 transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
                     >
                         Meal Plan
                     </button>

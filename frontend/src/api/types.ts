@@ -20,4 +20,14 @@ export interface MealPlan {
 export interface User {
     id: number
     email: string
+    dietary_preferences: string[]
 }
+
+export const DIETARY_OPTIONS = [
+    'vegetarian',
+    'vegan',
+    'gluten free',
+    'dairy free',
+    'ketogenic',
+    'paleo',
+] as const
