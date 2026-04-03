@@ -37,13 +37,13 @@ func (app *application) AuthMiddleware(next http.Handler) http.Handler {
 
 type contextKey string
 
-const userContextKet contextKey = "user"
+const userContextKey contextKey = "user"
 
 func setUserContext(ctx context.Context, claims *auth.Claims) context.Context {
-	return context.WithValue(ctx, userContextKet, claims)
+	return context.WithValue(ctx, userContextKey, claims)
 }
 
 func getUserFromContext(r *http.Request) *auth.Claims {
-	claims, _ := r.Context().Value(userContextKet).(*auth.Claims)
+	claims, _ := r.Context().Value(userContextKey).(*auth.Claims)
 	return claims
 }

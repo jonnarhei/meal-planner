@@ -64,7 +64,10 @@ func (app *application) mount() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(app.AuthMiddleware)
 			r.Get("/", app.ListUsersHandler)
-			r.Get("/me", app.getMeHandler)
+			r.Route("/me", func(r chi.Router) {
+				r.Get("/", app.getMeHandler)
+				r.Put("/preferences", app.updateDietaryPreferences)
+			})
 		})
 	})
 

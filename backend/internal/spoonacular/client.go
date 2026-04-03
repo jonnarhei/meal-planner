@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -54,19 +55,19 @@ type RandomRecipeResponse struct {
 	Recipes []Recipe `json:"recipes"`
 }
 
-func (c *Client) GetRandomRecipes(ctx context.Context, n int) (*RandomRecipeResponse, error) {
+func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []string) (*RandomRecipeResponse, error) {
 	var response RandomRecipeResponse
 
 	params := url.Values{}
 	params.Set("number", strconv.Itoa(n))
-	params.Set("include-tags", "main course")
+
+	tags := append([]string{"main course"}, preferences...)
+	params.Set("include-tags", strings.Join(tags, ","))
 
 	err := c.get(ctx, "/recipes/random", params, &response)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return &response, nil
 }
-

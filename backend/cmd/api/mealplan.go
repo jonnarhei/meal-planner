@@ -12,8 +12,8 @@ import (
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
-func (app *application) generateMealPlan(ctx context.Context, userID int64) (*models.MealPlan, error) {
-	randomRecipes, err := app.spoonacular.GetRandomRecipes(ctx, 7)
+func (app *application) generateMealPlan(ctx context.Context, userID int64, preferences []string) (*models.MealPlan, error) {
+	randomRecipes, err := app.spoonacular.GetRandomRecipes(ctx, 7, preferences)
 
 	slog.Info("recipes fetched", "count", len(randomRecipes.Recipes))
 
@@ -66,7 +66,14 @@ func (app *application) getCurrentMealPlanHandler(w http.ResponseWriter, r *http
 
 	//check if there was no plan returned
 	if plan == nil {
-		plan, err = app.generateMealPlan(r.Context(), claims.UserID)
+		user, err := app.store.Users.GetByID(r.Context(), claims.UserID)
+		if err != nil {
+			slog.Error("failed to get user from db", "error", err)
+			jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		plan, err = app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences)
 		if err != nil {
 			slog.Error("failed to generate meal plan", "error", err)
 			jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
@@ -103,7 +110,14 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	recipeResponse, err := app.spoonacular.GetRandomRecipes(r.Context(), 1)
+	user, err := app.store.Users.GetByID(r.Context(), claims.UserID)
+	if err != nil {
+		slog.Error("failed to get user from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	recipeResponse, err := app.spoonacular.GetRandomRecipes(r.Context(), 1, user.DietaryPreferences)
 	if err != nil {
 		slog.Error("Could not get random recipe from api", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
@@ -145,7 +159,14 @@ func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	plan, err := app.generateMealPlan(r.Context(), claims.UserID)
+	user, err := app.store.Users.GetByID(r.Context(), claims.UserID)
+	if err != nil {
+		slog.Error("failed to get user from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	plan, err := app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences)
 	if err != nil {
 		slog.Error("could not generate a new mealplan from api", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)

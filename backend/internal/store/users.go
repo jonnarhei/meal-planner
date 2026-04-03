@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
+	"github.com/lib/pq"
 )
 
 type UsersStore struct {
@@ -89,4 +90,36 @@ func (u *UsersStore) GetByEmail(ctx context.Context, email string) (*models.User
 	}
 
 	return user, nil
+}
+
+func (u *UsersStore) GetByID(ctx context.Context, userID int64) (*models.User, error) {
+	query := `
+	SELECT id, email, created_at, dietary_preferences FROM users
+	WHERE id = $1
+	`
+
+	user := &models.User{}
+	err := u.db.QueryRowContext(ctx, query, userID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.CreatedAt,
+		pq.Array(&user.DietaryPreferences),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (u *UsersStore) UpdatePreferences(ctx context.Context, userID int64, preferences []string) error {
+	query := `
+	UPDATE users
+	SET dietary_preferences = $1
+	WHERE id = $2
+	`
+
+	_, err := u.db.ExecContext(ctx, query, pq.Array(preferences), userID)
+	return err
 }

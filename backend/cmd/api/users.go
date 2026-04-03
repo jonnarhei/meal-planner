@@ -111,8 +111,37 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 
 func (app *application) getMeHandler(w http.ResponseWriter, r *http.Request) {
 	claims := getUserFromContext(r)
-	jsonutil.WriteHttpJson(w, http.StatusOK, map[string]any{
-		"id":    claims.UserID,
-		"email": claims.Email,
-	})
+
+	user, err := app.store.Users.GetByID(r.Context(), claims.UserID)
+	if err != nil {
+		slog.Error("error getting user from database", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	jsonutil.WriteHttpJson(w, http.StatusOK, user)
+}
+
+
+type updateDietaryPreferencesPayload struct {
+	Preferences []string
+}
+
+func (app *application) updateDietaryPreferences(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	var payload updateDietaryPreferencesPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		slog.Error("could not decode request into payload", "error", err)
+		jsonutil.WriteError(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := app.store.Users.UpdatePreferences(r.Context(), claims.UserID, payload.Preferences); err != nil {
+		slog.Error("could not update dietary preferences", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
