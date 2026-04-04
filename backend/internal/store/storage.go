@@ -10,7 +10,6 @@ import (
 type Storage struct {
 	Users interface {
 		Create(context.Context, *models.User) error
-		ListUsers(context.Context) ([]models.User, error)
 		GetByEmail(context.Context, string) (*models.User, error)
 		GetByID(context.Context, int64) (*models.User, error)
 		UpdatePreferences(context.Context, int64, []string) error
