@@ -36,6 +36,7 @@ function MealPlanPage() {
                     r.day === day ? updatedRecipe : r
                 )
             }))
+            toast.success('Recipe changed! Regenerate your shopping list to update ingredients')
         } catch (err) {
             toast.error('Failed to change recipe')
         } finally {

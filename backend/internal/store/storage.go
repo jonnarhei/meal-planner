@@ -21,11 +21,20 @@ type Storage struct {
 		UpdateRecipeForDay(context.Context, *models.MealPlanRecipe) error
 		DeleteCurrent(context.Context, int64) error
 	}
+	Shoppinglist interface {
+		AddItems(context.Context, int64, []models.ShoppinglistItem) error
+		GetAll(context.Context, int64) ([]models.ShoppinglistItem, error)
+		ToggleChecked(context.Context, int64, int64) error
+		DeleteItem(context.Context, int64, int64) error
+		DeleteChecked(context.Context, int64) error
+		DeleteBySource(context.Context, int64, string) error
+	}
 }
 
 func NewStorage(db *sql.DB) *Storage {
 	return &Storage{
-		Users:     &UsersStore{db},
-		Mealplans: &MealPlanStore{db},
+		Users:        &UsersStore{db},
+		Mealplans:    &MealPlanStore{db},
+		Shoppinglist: &ShoppinglistStore{db},
 	}
 }

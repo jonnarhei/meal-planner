@@ -31,3 +31,14 @@ export const DIETARY_OPTIONS = [
     'ketogenic',
     'paleo',
 ] as const
+
+export interface ShoppingListItem {
+    id: number
+    user_id: number
+    name: string
+    amount: number
+    unit: string
+    checked: boolean
+    source: string
+    created_at: string
+}

@@ -58,21 +58,6 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	jsonutil.WriteHttpJson(w, http.StatusCreated, user)
 }
 
-// mostly for my own curiosity, wouldnt be accessible in a public application
-func (app *application) ListUsersHandler(w http.ResponseWriter, r *http.Request) {
-	claims := getUserFromContext(r)
-	slog.Info("request by", "user_id", claims.UserID, "email", claims.Email)
-
-	users, err := app.store.Users.ListUsers(r.Context())
-	if err != nil {
-		slog.Error("failed to list users", "error", err)
-		jsonutil.WriteError(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
-	jsonutil.WriteHttpJson(w, http.StatusOK, users)
-}
-
 type loginUserPayload struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

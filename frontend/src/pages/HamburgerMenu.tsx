@@ -54,6 +54,13 @@ function HamburgerMenu() {
                     </button>
                     <hr className="my-1 border-orange-100" />
                     <button
+                        onClick={() => {navigate('/shopping-list'); setOpen(false)}}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
+                    >
+                        Shopping List
+                    </button>
+                    <hr className="my-1 border-orange-100" />
+                    <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                     >

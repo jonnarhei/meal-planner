@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jonnarhei/meal-planner/backend/internal/jsonutil"
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
@@ -105,8 +107,7 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 
 	var payload changeRecipePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		slog.Error("Error decoding json into variable", "error", err)
-		jsonutil.WriteError(w, "internal server error", http.StatusBadRequest)
+		jsonutil.WriteError(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
@@ -132,13 +133,13 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 	recipe := recipeResponse.Recipes[0]
 
 	updatedRecipe := &models.MealPlanRecipe{
-		ID: currentPlan.Recipes[payload.Day - 1].ID,
-		MealPlanID: currentPlan.ID,
-		RecipeID: recipe.RecipeID,
+		ID:          currentPlan.Recipes[payload.Day-1].ID,
+		MealPlanID:  currentPlan.ID,
+		RecipeID:    recipe.RecipeID,
 		RecipeTitle: recipe.Title,
-		Image: recipe.Image,
-		SourceURL: recipe.URL,
-		Day: int(payload.Day),
+		Image:       recipe.Image,
+		SourceURL:   recipe.URL,
+		Day:         int(payload.Day),
 	}
 
 	if err = app.store.Mealplans.UpdateRecipeForDay(r.Context(), updatedRecipe); err != nil {
@@ -152,7 +153,13 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 
 func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http.Request) {
 	claims := getUserFromContext(r)
-	
+
+	if err := app.store.Shoppinglist.DeleteBySource(r.Context(), claims.UserID, "meal_plan"); err != nil {
+		slog.Error("failed to delete old shopping list items", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	if err := app.store.Mealplans.DeleteCurrent(r.Context(), claims.UserID); err != nil {
 		slog.Error("Could not delete the current mealplan", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
@@ -180,4 +187,162 @@ func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http
 	}
 
 	jsonutil.WriteHttpJson(w, http.StatusOK, plan)
+}
+
+func (app *application) getShoppingListHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	shoppingList, err := app.store.Shoppinglist.GetAll(r.Context(), claims.UserID)
+	if err != nil {
+		slog.Error("failed to get shopping list from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	jsonutil.WriteHttpJson(w, http.StatusOK, shoppingList)
+}
+
+type addShoppingListItemPayload struct {
+	Items []struct {
+		Name   string  `json:"name"`
+		Amount float64 `json:"amount"`
+		Unit   string  `json:"unit"`
+	} `json:"items"`
+}
+
+func (app *application) addShoppingListItemsHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	var payload addShoppingListItemPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		jsonutil.WriteError(w, "bad request", http.StatusBadRequest)
+		return 
+	}
+
+	if len(payload.Items) == 0 {
+		jsonutil.WriteError(w, "no items provided", http.StatusBadRequest)
+		return 
+	}
+
+	items := make([]models.ShoppinglistItem, len(payload.Items))
+	for index, item := range payload.Items {
+		items[index] = models.ShoppinglistItem{
+			UserID: claims.UserID,
+			Name: item.Name,
+			Amount: item.Amount,
+			Unit: item.Unit,
+			Source: "manual",
+		}
+	}
+
+	if err := app.store.Shoppinglist.AddItems(r.Context(), claims.UserID, items); err != nil {
+		slog.Error("failed to add shopping list items to db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return 
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (app *application) addFromMealPlanHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	if err := app.store.Shoppinglist.DeleteBySource(r.Context(), claims.UserID, "meal_plan"); err != nil {
+		slog.Error("failed to delete old shopping list items", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	plan, err := app.store.Mealplans.GetCurrent(r.Context(), claims.UserID)
+	if err == sql.ErrNoRows {
+		jsonutil.WriteError(w, "no active meal plan found", http.StatusNotFound)
+	}
+	if err != nil {
+		slog.Error("failed to get current mealplan from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	ids := make([]int64, len(plan.Recipes))
+	for index, recipe := range plan.Recipes {
+		ids[index] = recipe.RecipeID
+	}
+
+	recipes, err := app.spoonacular.GetIngredientsForRecipes(r.Context(), ids)
+	if err != nil {
+		slog.Error("failed to get ingredients information for recipes", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var items []models.ShoppinglistItem
+	for _, recipe := range recipes {
+		for _, ingredient := range recipe.ExtendedIngredients {
+			items = append(items, models.ShoppinglistItem{
+				UserID: claims.UserID,
+				Name: ingredient.Name,
+				Amount: ingredient.Measures.Metric.Amount,
+				Unit: ingredient.Measures.Metric.UnitLong,
+				Source: "meal_plan",
+			})
+		}
+	}
+
+	if err := app.store.Shoppinglist.AddItems(r.Context(), claims.UserID, items); err != nil {
+		slog.Error("failed to add shoppin list items to db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (app *application) toggleCheckedHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		jsonutil.WriteError(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := app.store.Shoppinglist.ToggleChecked(r.Context(), id, claims.UserID); err != nil {
+		slog.Error("failed to toggle item in db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return 
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (app *application) deleteItemHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		jsonutil.WriteError(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := app.store.Shoppinglist.DeleteItem(r.Context(), id, claims.UserID); err != nil {
+		slog.Error("failed to delete item from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return 
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (app *application) deleteCheckedHandler(w http.ResponseWriter, r *http.Request) {
+	claims := getUserFromContext(r)
+
+	if err := app.store.Shoppinglist.DeleteChecked(r.Context(), claims.UserID); err != nil {
+		slog.Error("failed to delete checked items from db", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+		return 
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

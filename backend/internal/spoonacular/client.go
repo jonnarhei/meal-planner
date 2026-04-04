@@ -71,3 +71,41 @@ func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []stri
 
 	return &response, nil
 }
+
+type Measures struct {
+	Amount   float64 `json:"amount"`
+	UnitLong string  `json:"unitLong"`
+}
+
+type MetricMeasures struct {
+	Metric Measures `json:"metric"`
+}
+
+type Ingredient struct {
+	Name     string         `json:"name"`
+	Measures MetricMeasures `json:"Measures"`
+}
+
+type RecipeInformation struct {
+	ID                  int64        `json:"id"`
+	ExtendedIngredients []Ingredient `json:"extendedIngredients"`
+}
+
+func (c *Client) GetIngredientsForRecipes(ctx context.Context, recipeIDs []int64) ([]RecipeInformation, error) {
+	var response []RecipeInformation
+
+	idStrings := make([]string, len(recipeIDs))
+	for index, id := range recipeIDs {
+		idStrings[index] = strconv.FormatInt(id, 10)
+	}
+
+	params := url.Values{}
+	params.Set("ids", strings.Join(idStrings, ","))
+
+	err := c.get(ctx, "/recipes/informationBulk", params, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
