@@ -13,7 +13,9 @@ import (
 )
 
 func (app *application) generateMealPlan(ctx context.Context, userID int64, preferences []string) (*models.MealPlan, error) {
+	start := time.Now()
 	randomRecipes, err := app.recipes.GetRandomRecipes(ctx, 14, preferences)
+	slog.Info("GetRandomRecipes took", "duration", time.Since(start))
 
 	if err != nil {
 		return nil, err

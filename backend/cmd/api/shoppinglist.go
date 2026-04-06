@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jonnarhei/meal-planner/backend/internal/jsonutil"
@@ -23,7 +24,7 @@ func isValidIngredient(name string) bool {
 		return false
 	}
 	//most recipes dont contain colons
-	if strings.Contains(name, ":") {
+	if strings.Contains(name, ":") || strings.Contains(name, "(") || strings.Contains(name, ")") {
 		return false
 	}
 	if strings.Contains(strings.ToLower(name), "tsp") || strings.Contains(strings.ToLower(name), "tbsp"){
@@ -111,7 +112,10 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 		ids[i] = recipe.RecipeID
 	}
 
+	start := time.Now()
 	recipes, err := app.recipes.GetRecipeInformationBulk(ctx, ids)
+	slog.Info("GetRecipeInformationBulk took", "duration", time.Since(start))
+
 	if err != nil {
 		return err
 	}
