@@ -48,6 +48,34 @@ func isValidUnit(unit string) bool {
 	return true
 }
 
+// checks if unit is large, medium, small etc. want to remove those
+func isValidWholeItem(item string) bool {
+	invalid := []string{"large", "medium", "small", "smalls", "mediums", "larges"}
+	normalized := strings.ToLower(strings.TrimSpace(item))
+
+	for _, inv := range invalid {
+		if normalized == inv {
+			return false
+		}
+	}
+
+	return true
+}
+
+func normalizeName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+
+	// dont want to strip short words that may normally end in "es" or "s"
+	if strings.HasSuffix(name, "es") && len(name) > 4 {
+		return strings.TrimSuffix(name, "es")
+	}
+	if strings.HasSuffix(name, "s") && len(name) > 3 {
+		return strings.TrimSuffix(name, "s")
+	}
+
+	return name
+}
+
 func normalizeUnit(unit string) string {
 	switch strings.ToLower(strings.TrimSpace(unit)) {
 	case "tsp", "tsps", "teaspoon", "teaspoons":
@@ -148,11 +176,15 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 		for _, ingredient := range recipe.Ingredients {
 			if !isValidIngredient(ingredient.Name) || !isValidUnit(ingredient.Unit) {
 				continue
+			} 
+			normalizedUnit := normalizeUnit(ingredient.Unit)
+			if isValidWholeItem(normalizedUnit) {
+				normalizedUnit = ""
 			}
-			base := toBaseUnit(ingredient.Amount, normalizeUnit(ingredient.Unit))
+			base := toBaseUnit(ingredient.Amount, normalizedUnit)
 			items = append(items, models.ShoppinglistItem{
 				UserID: userID,
-				Name:   ingredient.Name,
+				Name:   normalizeName(ingredient.Name),
 				Amount: base.amount,
 				Unit:   base.unit,
 				Source: "meal_plan",
