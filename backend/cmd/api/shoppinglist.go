@@ -27,7 +27,7 @@ func isValidIngredient(name string) bool {
 	if strings.Contains(name, ":") || strings.Contains(name, "(") || strings.Contains(name, ")") {
 		return false
 	}
-	if strings.Contains(strings.ToLower(name), "tsp") || strings.Contains(strings.ToLower(name), "tbsp"){
+	if strings.Contains(strings.ToLower(name), "tsp") || strings.Contains(strings.ToLower(name), "tbsp") {
 		return false
 	}
 	if strings.Contains(strings.ToLower(name), "shopping") || strings.Contains(strings.ToLower(name), "list") {
@@ -117,20 +117,20 @@ func toBaseUnit(amount float64, unit string) measurement {
 		return measurement{amount * 3, "tsp"}
 	// volume, turn into milliliters
 	case "cup":
-        return measurement{amount * 236.59, "ml"}
-    case "fl oz":
-        return measurement{amount * 29.57, "ml"}
-    case "l":
-        return measurement{amount * 1000, "ml"}
-	// weight, turn into grams
-    case "oz":
-        return measurement{amount * 28.35, "g"}
-    case "lb":
-        return measurement{amount * 453.59, "g"}
-    case "kg":
-        return measurement{amount * 1000, "g"}
-    default:
-        return measurement{amount, unit}
+		return measurement{amount * 236.59, "ml"}
+	case "fl oz":
+		return measurement{amount * 29.57, "ml"}
+	case "l":
+		return measurement{amount * 1000, "ml"}
+		// weight, turn into grams
+	case "oz":
+		return measurement{amount * 28.35, "g"}
+	case "lb":
+		return measurement{amount * 453.59, "g"}
+	case "kg":
+		return measurement{amount * 1000, "g"}
+	default:
+		return measurement{amount, unit}
 	}
 }
 
@@ -176,9 +176,9 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 		for _, ingredient := range recipe.Ingredients {
 			if !isValidIngredient(ingredient.Name) || !isValidUnit(ingredient.Unit) {
 				continue
-			} 
+			}
 			normalizedUnit := normalizeUnit(ingredient.Unit)
-			if isValidWholeItem(normalizedUnit) {
+			if !isValidWholeItem(normalizedUnit) {
 				normalizedUnit = ""
 			}
 			base := toBaseUnit(ingredient.Amount, normalizedUnit)
