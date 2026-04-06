@@ -50,9 +50,9 @@ func main() {
 	spoonacularClient := spoonacular.NewClient(env.GetString("SPOONACULAR_API_KEY", ""))
 
 	app := &application{
-		config:      cfg,
-		store:       *store,
-		spoonacular: *spoonacularClient,
+		config:  cfg,
+		store:   *store,
+		recipes: spoonacularClient,
 	}
 
 	mux := app.mount()

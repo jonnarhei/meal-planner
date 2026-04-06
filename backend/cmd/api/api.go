@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/env"
-	"github.com/jonnarhei/meal-planner/backend/internal/spoonacular"
+	"github.com/jonnarhei/meal-planner/backend/internal/recipeclient"
 	"github.com/jonnarhei/meal-planner/backend/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -16,9 +16,9 @@ import (
 )
 
 type application struct {
-	config      config
-	store       store.Storage
-	spoonacular spoonacular.Client
+	config  config
+	store   store.Storage
+	recipes recipeclient.Client
 }
 
 type config struct {
@@ -41,7 +41,7 @@ type jwtConfig struct {
 
 func (app *application) mount() http.Handler {
 	allowedOrigins := env.GetString("ALLOWED_ORIGINS", "http://localhost:5173")
-	
+
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(cors.Options{
@@ -56,7 +56,7 @@ func (app *application) mount() http.Handler {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(httprate.LimitByIP(60, time.Minute))
+	router.Use(httprate.LimitByIP(100, time.Minute))
 
 	router.Use(middleware.Timeout(60 * time.Second))
 
