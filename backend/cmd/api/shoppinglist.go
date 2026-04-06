@@ -106,6 +106,29 @@ func toBaseUnit(amount float64, unit string) measurement {
 	}
 }
 
+// fix for ON DUPLICATE giving errors on batch inserts into db
+func duplicateItems(items []models.ShoppinglistItem) []models.ShoppinglistItem {
+	type key struct {
+		name string
+		unit string
+	}
+
+	seen := make(map[key]int)
+	var result []models.ShoppinglistItem
+
+	for _, item := range items {
+		k := key{name: item.Name, unit: item.Unit}
+		if idx, exists := seen[k]; exists {
+			result[idx].Amount += item.Amount
+		} else {
+			seen[k] = len(result)
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
 func (app *application) generateShoppingListFromPlan(ctx context.Context, userID int64, plan *models.MealPlan) error {
 	ids := make([]int64, len(plan.Recipes))
 	for i, recipe := range plan.Recipes {
@@ -136,6 +159,8 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 			})
 		}
 	}
+
+	items = duplicateItems(items)
 
 	return app.store.Shoppinglist.AddItems(ctx, userID, items)
 }
