@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
@@ -18,29 +20,24 @@ func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []
 	}
 	defer tx.Rollback()
 	
-	query := `
+	valueStrings := make([]string, len(items))
+	valueArgs := make([]interface{}, 0, len(items)*5)
+
+	for i, item := range items {
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", (i * 5) + 1, (i * 5) + 2, (i * 5) + 3, (i * 5) + 4, (i * 5) + 5)
+		valueArgs = append(valueArgs, item.UserID, item.Name, item.Amount, item.Unit, item.Source)	
+	}
+
+	query := fmt.Sprintf(`
 	INSERT INTO shopping_list_items (user_id, name, amount, unit, source)
-	VALUES ($1, $2, $3, $4, $5)
+	VALUES %s
 	ON CONFLICT (user_id, name, unit)
 	DO UPDATE SET amount = shopping_list_items.amount + EXCLUDED.amount
-	RETURNING id, created_at
-	`
+	`, strings.Join(valueStrings, ","))
 
-	for i := range items {
-		err = tx.QueryRowContext(ctx, query,
-			items[i].UserID,
-			items[i].Name,
-			items[i].Amount,
-			items[i].Unit,
-			items[i].Source,
-		).Scan(
-			&items[i].ID,
-			&items[i].CreatedAt,
-		)
-
-		if err != nil {
-			return err
-		}
+	_, err = tx.ExecContext(ctx, query, valueArgs...)
+	if err != nil {
+		return err
 	}
 
 	return tx.Commit()

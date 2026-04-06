@@ -108,17 +108,17 @@ func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []stri
 		ingredients := make([]recipeclient.Ingredient, 0, len(r.ExtendedIngredients))
 		for _, ingr := range r.ExtendedIngredients {
 			ingredients = append(ingredients, recipeclient.Ingredient{
-				Name: ingr.Name,
+				Name:   ingr.Name,
 				Amount: ingr.Measures.Metric.Amount,
-				Unit: ingr.Measures.Metric.UnitShort,
+				Unit:   ingr.Measures.Metric.UnitShort,
 			})
 		}
 
 		recipes[i] = recipeclient.Recipe{
-			RecipeID: r.ID,
-			Title:    r.Title,
-			Image:    r.Image,
-			URL:      r.SourceURL,
+			RecipeID:    r.ID,
+			Title:       r.Title,
+			Image:       r.Image,
+			URL:         r.SourceURL,
 			Ingredients: ingredients,
 		}
 	}
