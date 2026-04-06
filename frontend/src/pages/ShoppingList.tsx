@@ -118,13 +118,6 @@ function ShoppingList() {
                         <HamburgerMenu />
                         <h1 className="text-2xl font-bold text-orange-600">Shopping List</h1>
                     </div>
-                    <button
-                        onClick={handleAddFromMealPlan}
-                        disabled={addingFromPlan}
-                        className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
-                    >
-                        {addingFromPlan ? 'Adding...' : '+ From Meal Plan'}
-                    </button>
                 </div>
             </div>
 
@@ -158,6 +151,16 @@ function ShoppingList() {
                         className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
                     >
                         Add
+                    </button>
+                </div>
+
+                <div className="bg-white rounded-3xl shadow-sm border border-orange-100 p-4 mb-6 flex gap-2">
+                    <button
+                        onClick={handleAddFromMealPlan}
+                        disabled={addingFromPlan}
+                        className="w-full bg-orange-100 hover:bg-orange-200 text-orange-600 text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                        {addingFromPlan ? 'Adding...' : 'Update From Meal Plan'}
                     </button>
                 </div>
 
