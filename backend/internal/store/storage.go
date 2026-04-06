@@ -9,24 +9,24 @@ import (
 
 type Storage struct {
 	Users interface {
-		Create(context.Context, *models.User) error
-		GetByEmail(context.Context, string) (*models.User, error)
-		GetByID(context.Context, int64) (*models.User, error)
-		UpdatePreferences(context.Context, int64, []string) error
+		Create(ctx context.Context, user *models.User) error
+		GetByEmail(ctx context.Context, email string) (*models.User, error)
+		GetByID(ctx context.Context, userID int64) (*models.User, error)
+		UpdatePreferences(ctx context.Context, userID int64, preferences []string) error
 	}
 	Mealplans interface {
-		Create(context.Context, *models.MealPlan) error
-		GetCurrent(context.Context, int64) (*models.MealPlan, error)
-		UpdateRecipeForDay(context.Context, *models.MealPlanRecipe) error
-		DeleteCurrent(context.Context, int64) error
+		Create( ctx context.Context, mealPlan *models.MealPlan) error
+		GetCurrent(ctx context.Context, userID int64) (*models.MealPlan, error)
+		UpdateRecipeForDay(ctx context.Context, mealPlanRecipe *models.MealPlanRecipe) error
+		DeleteCurrent(ctx context.Context, userID int64) error
 	}
 	Shoppinglist interface {
-		AddItems(context.Context, int64, []models.ShoppinglistItem) error
-		GetAll(context.Context, int64) ([]models.ShoppinglistItem, error)
-		ToggleChecked(context.Context, int64, int64) error
-		DeleteItem(context.Context, int64, int64) error
-		DeleteChecked(context.Context, int64) error
-		DeleteBySource(context.Context, int64, string) error
+		AddItems(ctx context.Context, userID int64, items []models.ShoppinglistItem) error
+		GetAll(ctx context.Context, userID int64) ([]models.ShoppinglistItem, error)
+		ToggleChecked(ctx context.Context, itemID int64, userID int64) error
+		DeleteItem(ctx context.Context, itemID int64, userID int64) error
+		DeleteChecked(ctx context.Context, userID int64) error
+		DeleteBySource(ctx context.Context, userID int64, source string) error
 	}
 }
 
