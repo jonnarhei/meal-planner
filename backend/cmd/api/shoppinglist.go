@@ -33,6 +33,9 @@ func isValidIngredient(name string) bool {
 	if strings.Contains(strings.ToLower(name), "shopping") || strings.Contains(strings.ToLower(name), "list") {
 		return false
 	}
+	if strings.Contains(name, "*") {
+		return false
+	}
 	return true
 }
 
