@@ -22,6 +22,6 @@ type RecipeWithIngredients struct {
 }
 
 type Client interface {
-	GetRandomRecipes(ctx context.Context, n int, preferences []string) ([]Recipe, error)
+	GetRandomRecipes(ctx context.Context, n int, preferences []string, intolerances []string, excludedIngredients []string) ([]Recipe, error)
 	GetRecipeInformationBulk(ctx context.Context, ids []int64) ([]RecipeWithIngredients, error)
 }

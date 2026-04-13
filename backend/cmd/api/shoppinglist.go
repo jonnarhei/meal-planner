@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jonnarhei/meal-planner/backend/internal/jsonutil"
@@ -27,7 +26,7 @@ func isValidIngredient(name string) bool {
 	if strings.Contains(name, ":") || strings.Contains(name, "(") || strings.Contains(name, ")") {
 		return false
 	}
-	if strings.Contains(strings.ToLower(name), "tsp") || strings.Contains(strings.ToLower(name), "tbsp") {
+	if strings.Contains(strings.ToLower(name), "tsp") || strings.Contains(strings.ToLower(name), "tbsp") || strings.Contains(strings.ToLower(name), "tblsp") {
 		return false
 	}
 	if strings.Contains(strings.ToLower(name), "shopping") || strings.Contains(strings.ToLower(name), "list") {
@@ -69,10 +68,10 @@ func normalizeName(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 
 	// dont want to strip short words that may normally end in "es" or "s"
-	if strings.HasSuffix(name, "es") && len(name) > 4 {
+	if strings.HasSuffix(name, "es") && len(name) > 5 {
 		return strings.TrimSuffix(name, "es")
 	}
-	if strings.HasSuffix(name, "s") && len(name) > 3 {
+	if strings.HasSuffix(name, "s") && len(name) > 4 {
 		return strings.TrimSuffix(name, "s")
 	}
 
@@ -166,9 +165,7 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 		ids[i] = recipe.RecipeID
 	}
 
-	start := time.Now()
 	recipes, err := app.recipes.GetRecipeInformationBulk(ctx, ids)
-	slog.Info("GetRecipeInformationBulk took", "duration", time.Since(start))
 
 	if err != nil {
 		return err

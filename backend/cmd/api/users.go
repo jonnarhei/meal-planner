@@ -107,9 +107,10 @@ func (app *application) getMeHandler(w http.ResponseWriter, r *http.Request) {
 	jsonutil.WriteHttpJson(w, http.StatusOK, user)
 }
 
-
 type updateDietaryPreferencesPayload struct {
-	Preferences []string
+	Preferences         []string `json:"dietary_preferences"`
+	Intolerances        []string `json:"intolerances"`
+	ExcludedIngredients []string `json:"excluded_ingredients"`
 }
 
 func (app *application) updateDietaryPreferences(w http.ResponseWriter, r *http.Request) {
@@ -117,12 +118,11 @@ func (app *application) updateDietaryPreferences(w http.ResponseWriter, r *http.
 
 	var payload updateDietaryPreferencesPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		slog.Error("could not decode request into payload", "error", err)
 		jsonutil.WriteError(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
-	if err := app.store.Users.UpdatePreferences(r.Context(), claims.UserID, payload.Preferences); err != nil {
+	if err := app.store.Users.UpdatePreferences(r.Context(), claims.UserID, payload.Preferences, payload.Intolerances, payload.ExcludedIngredients); err != nil {
 		slog.Error("could not update dietary preferences", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
 		return

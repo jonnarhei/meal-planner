@@ -35,42 +35,6 @@ func (u *UsersStore) Create(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (u *UsersStore) ListUsers(ctx context.Context) ([]models.User, error) {
-	query := `
-	SELECT id, email, password, created_at FROM users
-	`
-
-	rows, err := u.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var users []models.User
-
-	for rows.Next() {
-		var user models.User
-		err := rows.Scan(
-			&user.ID,
-			&user.Email,
-			&user.Password,
-			&user.CreatedAt,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		users = append(users, user)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return users, nil
-}
-
 func (u *UsersStore) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
 	SELECT id, email, password, created_at FROM users
@@ -94,7 +58,7 @@ func (u *UsersStore) GetByEmail(ctx context.Context, email string) (*models.User
 
 func (u *UsersStore) GetByID(ctx context.Context, userID int64) (*models.User, error) {
 	query := `
-	SELECT id, email, created_at, dietary_preferences FROM users
+	SELECT id, email, created_at, dietary_preferences, intolerances, excluded_ingredients FROM users
 	WHERE id = $1
 	`
 
@@ -104,6 +68,8 @@ func (u *UsersStore) GetByID(ctx context.Context, userID int64) (*models.User, e
 		&user.Email,
 		&user.CreatedAt,
 		pq.Array(&user.DietaryPreferences),
+		pq.Array(&user.Intolerances),
+		pq.Array(&user.ExcludedIngredients),
 	)
 
 	if err != nil {
@@ -113,13 +79,13 @@ func (u *UsersStore) GetByID(ctx context.Context, userID int64) (*models.User, e
 	return user, nil
 }
 
-func (u *UsersStore) UpdatePreferences(ctx context.Context, userID int64, preferences []string) error {
+func (u *UsersStore) UpdatePreferences(ctx context.Context, userID int64, preferences []string, intolerances []string, excludedIngredients []string) error {
 	query := `
 	UPDATE users
-	SET dietary_preferences = $1
-	WHERE id = $2
+	SET dietary_preferences = $1, intolerances = $2, excluded_ingredients = $3
+	WHERE id = $4
 	`
 
-	_, err := u.db.ExecContext(ctx, query, pq.Array(preferences), userID)
+	_, err := u.db.ExecContext(ctx, query, pq.Array(preferences), pq.Array(intolerances), pq.Array(excludedIngredients), userID)
 	return err
 }
