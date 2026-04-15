@@ -34,7 +34,7 @@ function App() {
         </ProtectedRoute>
       }/>
 
-      <Route path="/dietary-preferences" element= {
+      <Route path="/dietary-preferences" element={
         <ProtectedRoute>
           <DietaryPreferences />
         </ProtectedRoute>

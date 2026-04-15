@@ -88,7 +88,7 @@ type RandomRecipeResponse struct {
 	Recipes []Recipe `json:"recipes"`
 }
 
-func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []string) ([]recipeclient.Recipe, error) {
+func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []string, intolerances []string, excludedIngredients []string) ([]recipeclient.Recipe, error) {
 	var response complexSearchResponse
 
 	params := url.Values{}
@@ -96,6 +96,8 @@ func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []stri
 	params.Set("sort", "random")
 	params.Set("type", "main course")
 	params.Set("diet", strings.Join(preferences, ","))
+	params.Set("intolerances", strings.Join(intolerances, ","))
+	params.Set("excludeIngredients", strings.Join(excludedIngredients, ","))
 	params.Set("addRecipeInformation", "true")
 
 	err := c.get(ctx, "/recipes/complexSearch", params, &response)

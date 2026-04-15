@@ -6,16 +6,27 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/jsonutil"
+	"github.com/jonnarhei/meal-planner/backend/internal/recipeclient"
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 )
 
-func (app *application) generateMealPlan(ctx context.Context, userID int64, preferences []string) (*models.MealPlan, error) {
-	start := time.Now()
-	randomRecipes, err := app.recipes.GetRandomRecipes(ctx, 14, preferences)
-	slog.Info("GetRandomRecipes took", "duration", time.Since(start))
+func containsExcluded(recipe recipeclient.Recipe, excluded []string) bool {
+	for _, ingredient := range recipe.Ingredients {
+		for _, excl := range excluded {
+			if strings.Contains(strings.ToLower(ingredient.Name), strings.ToLower(excl)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (app *application) generateMealPlan(ctx context.Context, userID int64, preferences []string, intolerances []string, excludedIngredients []string) (*models.MealPlan, error) {
+	randomRecipes, err := app.recipes.GetRandomRecipes(ctx, 14, preferences, intolerances, excludedIngredients)
 
 	if err != nil {
 		return nil, err
@@ -30,6 +41,9 @@ func (app *application) generateMealPlan(ctx context.Context, userID int64, pref
 			break
 		}
 		if seen[recipe.RecipeID] {
+			continue
+		}
+		if containsExcluded(recipe, excludedIngredients) {
 			continue
 		}
 		seen[recipe.RecipeID] = true
@@ -84,7 +98,7 @@ func (app *application) getCurrentMealPlanHandler(w http.ResponseWriter, r *http
 			return
 		}
 
-		plan, err = app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences)
+		plan, err = app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences, user.Intolerances, user.ExcludedIngredients)
 		if err != nil {
 			slog.Error("failed to generate meal plan", "error", err)
 			jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
@@ -136,14 +150,28 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	recipes, err := app.recipes.GetRandomRecipes(r.Context(), 1, user.DietaryPreferences)
+	recipes, err := app.recipes.GetRandomRecipes(r.Context(), 5, user.DietaryPreferences, user.Intolerances, user.ExcludedIngredients)
 	if err != nil {
 		slog.Error("could not get random recipe from api", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	recipe := recipes[0]
+	var recipe recipeclient.Recipe
+	found := false
+
+	for _, candidate := range recipes {
+		if !containsExcluded(candidate, user.ExcludedIngredients) {
+			recipe = candidate
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		jsonutil.WriteError(w, "could not find a suitable recipe", http.StatusInternalServerError)
+		return
+	}
 
 	updatedRecipe := &models.MealPlanRecipe{
 		ID:          currentPlan.Recipes[payload.Day-1].ID,
@@ -186,7 +214,7 @@ func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	plan, err := app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences)
+	plan, err := app.generateMealPlan(r.Context(), claims.UserID, user.DietaryPreferences, user.Intolerances, user.ExcludedIngredients)
 	if err != nil {
 		slog.Error("could not generate a new mealplan from api", "error", err)
 		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)

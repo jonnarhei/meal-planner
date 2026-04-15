@@ -21,6 +21,8 @@ export interface User {
     id: number
     email: string
     dietary_preferences: string[]
+    intolerances: string[]
+    excluded_ingredients: string[]
 }
 
 export const DIETARY_OPTIONS = [
@@ -30,6 +32,21 @@ export const DIETARY_OPTIONS = [
     'dairy free',
     'ketogenic',
     'paleo',
+] as const
+
+export const INTOLERANCE_OPTIONS = [
+    'dairy',
+    'egg',
+    'gluten',
+    'grain',
+    'peanut',
+    'seafood',
+    'sesame',
+    'shellfish',
+    'soy',
+    'sulfite',
+    'tree nut',
+    'wheat'
 ] as const
 
 export interface ShoppingListItem {

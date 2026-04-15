@@ -10,7 +10,7 @@ type mockUserStore struct {
 	createFn func(context.Context, *models.User) error
 	getByEmailFn func(context.Context, string) (*models.User, error)
 	getByIDFn func(context.Context, int64) (*models.User, error)
-	updatePrefsFn func(context.Context, int64, []string) error
+	updatePrefsFn func(context.Context, int64, []string, []string, []string) error
 }
 
 func (m *mockUserStore) Create(ctx context.Context, user *models.User) error {
@@ -25,6 +25,6 @@ func (m *mockUserStore) GetByID(ctx context.Context, userID int64) (*models.User
 	return m.getByIDFn(ctx, userID)
 }
 
-func (m *mockUserStore) UpdatePreferences(ctx context.Context, userID int64, preferences []string) error {
-	return m.updatePrefsFn(ctx, userID, preferences)
+func (m *mockUserStore) UpdatePreferences(ctx context.Context, userID int64, preferences []string, intolerances []string, excludedIngredients []string) error {
+	return m.updatePrefsFn(ctx, userID, preferences, intolerances, excludedIngredients)
 }

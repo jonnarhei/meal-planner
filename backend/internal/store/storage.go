@@ -12,7 +12,7 @@ type Storage struct {
 		Create(ctx context.Context, user *models.User) error
 		GetByEmail(ctx context.Context, email string) (*models.User, error)
 		GetByID(ctx context.Context, userID int64) (*models.User, error)
-		UpdatePreferences(ctx context.Context, userID int64, preferences []string) error
+		UpdatePreferences(ctx context.Context, userID int64, preferences []string, intolerances []string, excludedIngredients []string) error
 	}
 	Mealplans interface {
 		Create( ctx context.Context, mealPlan *models.MealPlan) error

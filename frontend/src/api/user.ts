@@ -6,6 +6,10 @@ export async function getCurrentUser(): Promise<User> {
     return response.data 
 }
 
-export async function updatePreferences(preferences: string[]): Promise<void> {
-    await client.put('/users/me/preferences', { preferences })
+export async function updatePreferences(preferences: string[], intolerances: string[], excludedIngredients: string[]): Promise<void> {
+    await client.put('/users/me/preferences', { 
+        dietary_preferences: preferences,
+        intolerances,
+        excluded_ingredients: excludedIngredients
+    })
 }
