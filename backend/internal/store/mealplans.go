@@ -132,12 +132,28 @@ func (m *MealPlanStore) UpdateRecipeForDay(ctx context.Context, recipe *models.M
 	SET recipe_id = $1, recipe_title = $2, image = $3, source_url = $4
 	WHERE meal_plan_id = $5 AND day = $6
 	`
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	_, err := m.db.ExecContext(ctx, query,
+	result, err := tx.ExecContext(ctx, query,
 		recipe.RecipeID, recipe.RecipeTitle, recipe.Image, recipe.SourceURL, recipe.MealPlanID, recipe.Day,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return tx.Commit()
 }
 
 func (m *MealPlanStore) DeleteCurrent(ctx context.Context, userID int64) error {
