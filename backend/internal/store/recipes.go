@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/jonnarhei/meal-planner/backend/internal/store/models"
 	"github.com/lib/pq"
@@ -43,27 +45,8 @@ func (r *RecipeStore) Create(ctx context.Context, recipe *models.UserRecipe) err
 		return err
 	}
 
-	for idx, ingredient := range recipe.Ingredients {
-		query = `
-		INSERT INTO user_recipe_ingredients (user_recipe_id, name, amount, unit, position)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id
-		`
-
-		err = tx.QueryRowContext(
-			ctx,
-			query,
-			recipe.ID,
-			ingredient.Name,
-			ingredient.Amount,
-			ingredient.Unit,
-			idx,
-		).Scan(
-			&ingredient.ID,
-		)
-
-		if err != nil {
-			return err
-		}
+	if err := insertIngredients(ctx, tx, recipe.ID, recipe.Ingredients); err != nil {
+		return err
 	}
 
 	return tx.Commit()
@@ -158,7 +141,7 @@ func (r *RecipeStore) GetAllByUser(ctx context.Context, userID int64) ([]models.
 	return recipes, nil
 }
 
-func (r *RecipeStore) GetByID(ctx context.Context, id, userID int64) (*models.UserRecipe, error) {
+func (r *RecipeStore) GetByID(ctx context.Context, recipeID, userID int64) (*models.UserRecipe, error) {
 	query := `
 	SELECT id, user_id, title, image, source_url, instructions, servings, created_at, updated_at
 	FROM user_recipes
@@ -166,11 +149,12 @@ func (r *RecipeStore) GetByID(ctx context.Context, id, userID int64) (*models.Us
 	`
 
 	recipe := &models.UserRecipe{}
-	err := r.db.QueryRowContext(ctx, query, id, userID).Scan(
+	err := r.db.QueryRowContext(ctx, query, recipeID, userID).Scan(
 		&recipe.ID,
 		&recipe.UserID,
 		&recipe.Title,
 		&recipe.SourceUrl,
+		&recipe.Image,
 		&recipe.Instructions,
 		&recipe.Servings,
 		&recipe.CreatedAt,
@@ -256,15 +240,49 @@ func (r *RecipeStore) Update(ctx context.Context, recipe *models.UserRecipe) err
 		return err
 	}
 
-	for i, ingredient := range recipe.Ingredients {
-		_, err := tx.ExecContext(ctx, `
-		INSERT INTO user_recipe_ingredients (user_recipe_id, name, amount, unit, position)
-		VALUES ($1, $2, $3, $4, $5)
-		`, recipe.ID, ingredient.Name, ingredient.Amount, ingredient.Unit, i)
-		if err != nil {
-			return err
-		}
+	if err := insertIngredients(ctx, tx, recipe.ID, recipe.Ingredients); err != nil {
+		return err
 	}
 
 	return tx.Commit()
+}
+
+func (r *RecipeStore) Delete(ctx context.Context, recipeID, userID int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM user_recipes WHERE id = $1 AND user_id = $2`, recipeID, userID)
+
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func insertIngredients(ctx context.Context, tx *sql.Tx, recipeID int64, ingredients []models.UserRecipeIngredient) error {
+	if len(ingredients) == 0 {
+		return nil
+	}
+
+	valueStrings := make([]string, len(ingredients))
+	valueArgs := make([]interface{}, 0, len(ingredients)*5)
+
+	for i, ingredient := range ingredients {
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			(i*5)+1, (i*5)+2, (i*5)+3, (i*5)+4, (i*5)+5)
+		valueArgs = append(valueArgs, recipeID, ingredient.Name, ingredient.Amount, ingredient.Unit, i)
+	}
+
+	query := fmt.Sprintf(`
+	INSERT INTO user_recipe_ingredients (user_recipe_id, name, amount, unit, position)
+	VALUES %s
+	`, strings.Join(valueStrings, ","))
+
+	_, err := tx.ExecContext(ctx, query, valueArgs...)
+	return err
 }

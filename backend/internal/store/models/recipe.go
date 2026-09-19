@@ -20,7 +20,7 @@ type UserRecipe struct {
 type UserRecipeIngredient struct {
 	ID       int64  `json:"id"`
 	Name     string `json:"name"`
-	Amount   int    `json:"amount"`
+	Amount   float64    `json:"amount"`
 	Unit     string `json:"unit"`
 	Position int    `json:"position"`
 }

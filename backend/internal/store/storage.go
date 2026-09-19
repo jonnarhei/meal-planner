@@ -15,7 +15,7 @@ type Storage struct {
 		UpdatePreferences(ctx context.Context, userID int64, preferences []string, intolerances []string, excludedIngredients []string) error
 	}
 	Mealplans interface {
-		Create( ctx context.Context, mealPlan *models.MealPlan) error
+		Create(ctx context.Context, mealPlan *models.MealPlan) error
 		GetCurrent(ctx context.Context, userID int64) (*models.MealPlan, error)
 		UpdateRecipeForDay(ctx context.Context, mealPlanRecipe *models.MealPlanRecipe) error
 		DeleteCurrent(ctx context.Context, userID int64) error
@@ -28,6 +28,13 @@ type Storage struct {
 		DeleteChecked(ctx context.Context, userID int64) error
 		DeleteBySource(ctx context.Context, userID int64, source string) error
 	}
+	Recipes interface {
+		Create(ctx context.Context, recipe *models.UserRecipe) error
+		GetAllByUser(ctx context.Context, userID int64) ([]models.UserRecipe, error)
+		GetByID(ctx context.Context, recipeID, userID int64) (*models.UserRecipe, error)
+		Update(ctx context.Context, recipe *models.UserRecipe) error
+		Delete(ctx context.Context, recipeID, userID int64) error
+	}
 }
 
 func NewStorage(db *sql.DB) *Storage {
@@ -35,5 +42,6 @@ func NewStorage(db *sql.DB) *Storage {
 		Users:        &UsersStore{db},
 		Mealplans:    &MealPlanStore{db},
 		Shoppinglist: &ShoppinglistStore{db},
+		Recipes:      &RecipeStore{db},
 	}
 }
