@@ -24,7 +24,7 @@ func (r *RecipeStore) Create(ctx context.Context, recipe *models.UserRecipe) err
 
 	query := `
 	INSERT INTO user_recipes (user_id, title, image, source_url, instructions, servings)
-	VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at
+	VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at, updated_at
 	`
 
 	err = tx.QueryRowContext(
@@ -39,6 +39,7 @@ func (r *RecipeStore) Create(ctx context.Context, recipe *models.UserRecipe) err
 	).Scan(
 		&recipe.ID,
 		&recipe.CreatedAt,
+		&recipe.UpdatedAt,
 	)
 
 	if err != nil {
@@ -153,8 +154,8 @@ func (r *RecipeStore) GetByID(ctx context.Context, recipeID, userID int64) (*mod
 		&recipe.ID,
 		&recipe.UserID,
 		&recipe.Title,
-		&recipe.SourceUrl,
 		&recipe.Image,
+		&recipe.SourceUrl,
 		&recipe.Instructions,
 		&recipe.Servings,
 		&recipe.CreatedAt,
