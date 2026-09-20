@@ -14,18 +14,22 @@ type ShoppinglistStore struct {
 }
 
 func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []models.ShoppinglistItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	valueStrings := make([]string, len(items))
 	valueArgs := make([]interface{}, 0, len(items)*5)
 
 	for i, item := range items {
-		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", (i * 5) + 1, (i * 5) + 2, (i * 5) + 3, (i * 5) + 4, (i * 5) + 5)
-		valueArgs = append(valueArgs, item.UserID, item.Name, item.Amount, item.Unit, item.Source)	
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", (i*5)+1, (i*5)+2, (i*5)+3, (i*5)+4, (i*5)+5)
+		valueArgs = append(valueArgs, item.UserID, item.Name, item.Amount, item.Unit, item.Source)
 	}
 
 	query := fmt.Sprintf(`
@@ -71,7 +75,7 @@ func (s *ShoppinglistStore) GetAll(ctx context.Context, userID int64) ([]models.
 			&item.CreatedAt,
 		)
 
-		if err !=  nil {
+		if err != nil {
 			return nil, err
 		}
 

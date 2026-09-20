@@ -34,6 +34,7 @@ type Storage struct {
 		GetByID(ctx context.Context, recipeID, userID int64) (*models.UserRecipe, error)
 		Update(ctx context.Context, recipe *models.UserRecipe) error
 		Delete(ctx context.Context, recipeID, userID int64) error
+		GetIngredientsByRecipeIDs(ctx context.Context, userID int64, recipeIDs []int64) (map[int64][]models.UserRecipeIngredient, error)
 	}
 }
 

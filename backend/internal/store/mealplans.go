@@ -19,10 +19,10 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 	}
 	defer tx.Rollback()
 
-	// 1. Insert meal plan
+	// Insert meal plan
 	query := `
-	INSERT INTO meal_plans (user_id, start_date, end_date)
-	VALUES ($1, $2, $3) RETURNING id, created_at
+	INSERT INTO meal_plans (user_id, start_date, end_date, source, user_recipe_id)
+	VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at
 	`
 
 	err = tx.QueryRowContext(
@@ -40,7 +40,7 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 		return err
 	}
 
-	// 2. insert recipes
+	// insert recipes
 	for _, recipe := range mealPlan.Recipes {
 		query := `
 		INSERT INTO meal_plan_recipes (meal_plan_id, recipe_id, recipe_title, image, source_url, day)
@@ -90,15 +90,26 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 
 	//get recipes
 	recipesQuery := `
-	SELECT id, meal_plan_id, recipe_id, recipe_title, image, source_url, day
-	FROM meal_plan_recipes
-	WHERE meal_plan_id = $1
+	SELECT mpr.id,
+		   mpr.meal_plan_id,
+		   mpr.recipe_id
+		   COALESCE(ur.title, mpr.recipe_title),
+		   COALESCE(ur.image, mpt.image),
+		   COALESCE(ur.source_url, mpr.source_id),
+		   mpr.day,
+		   mpr.source,
+		   mpr.user_recipe_id
+	FROM meal_plan_recipes mpr
+	LEFT JOIN user_recipes ur ON ur.id = mpr.user_recipe_id
+	WHERE mpr.meal_plan_id = $1
+	ORDER BY mpr.day
 	`
 
 	rows, err := m.db.QueryContext(ctx, recipesQuery, plan.ID)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var recipe models.MealPlanRecipe
@@ -110,6 +121,8 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 			&recipe.Image,
 			&recipe.SourceURL,
 			&recipe.Day,
+			&recipe.Source,
+			&recipe.UserRecipeID,
 		)
 
 		if err != nil {
@@ -129,8 +142,8 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 func (m *MealPlanStore) UpdateRecipeForDay(ctx context.Context, recipe *models.MealPlanRecipe) error {
 	query := `
 	UPDATE meal_plan_recipes
-	SET recipe_id = $1, recipe_title = $2, image = $3, source_url = $4
-	WHERE meal_plan_id = $5 AND day = $6
+	SET recipe_id = $1, recipe_title = $2, image = $3, source_url = $4, source = $5, user_recipe_id = $6
+	WHERE meal_plan_id = $7 AND day = $8
 	`
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -139,7 +152,7 @@ func (m *MealPlanStore) UpdateRecipeForDay(ctx context.Context, recipe *models.M
 	defer tx.Rollback()
 
 	result, err := tx.ExecContext(ctx, query,
-		recipe.RecipeID, recipe.RecipeTitle, recipe.Image, recipe.SourceURL, recipe.MealPlanID, recipe.Day,
+		recipe.RecipeID, recipe.RecipeTitle, recipe.Image, recipe.SourceURL, recipe.Source, recipe.UserRecipeID, recipe.MealPlanID, recipe.Day,
 	)
 	if err != nil {
 		return err

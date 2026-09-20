@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -48,13 +49,13 @@ func (app *application) generateMealPlan(ctx context.Context, userID int64, pref
 		}
 		seen[recipe.RecipeID] = true
 
-
 		mealPlanRecipes = append(mealPlanRecipes, models.MealPlanRecipe{
 			RecipeID:    recipe.RecipeID,
 			RecipeTitle: recipe.Title,
 			Image:       recipe.Image,
 			SourceURL:   recipe.URL,
 			Day:         day,
+			Source:      models.RecipeSourceSpoonacular,
 		})
 		day++
 	}
@@ -118,23 +119,30 @@ func (app *application) getCurrentMealPlanHandler(w http.ResponseWriter, r *http
 	jsonutil.WriteHttpJson(w, http.StatusOK, plan)
 }
 
+var errNoSuitableRecipe = errors.New("could not find a suitable recipe")
+
 type changeRecipePayload struct {
-	Day int64 `json:"day"`
+	Day          int64  `json:"day"`
+	UserRecipeID *int64 `json:"user_recipe_id"`
 }
 
 func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Request) {
 	claims := getUserFromContext(r)
-	
-	currentPlan, err := app.store.Mealplans.GetCurrent(r.Context(), claims.UserID)
-	if err != nil {
-		slog.Error("failed to get current meal plan", "error", err)
-		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
 
 	var payload changeRecipePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		jsonutil.WriteError(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	currentPlan, err := app.store.Mealplans.GetCurrent(r.Context(), claims.UserID)
+	if err == sql.ErrNoRows {
+		jsonutil.WriteError(w, "no active meal plan found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		slog.Error("failed to get current meal plan", "error", err)
+		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -143,53 +151,76 @@ func (app *application) changeRecipeForDay(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, err := app.store.Users.GetByID(r.Context(), claims.UserID)
-	if err != nil {
-		slog.Error("failed to get user from db", "error", err)
-		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	recipes, err := app.recipes.GetRandomRecipes(r.Context(), 5, user.DietaryPreferences, user.Intolerances, user.ExcludedIngredients)
-	if err != nil {
-		slog.Error("could not get random recipe from api", "error", err)
-		jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	var recipe recipeclient.Recipe
-	found := false
-
-	for _, candidate := range recipes {
-		if !containsExcluded(candidate, user.ExcludedIngredients) {
-			recipe = candidate
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		jsonutil.WriteError(w, "could not find a suitable recipe", http.StatusInternalServerError)
-		return
-	}
-
 	updatedRecipe := &models.MealPlanRecipe{
-		ID:          currentPlan.Recipes[payload.Day-1].ID,
-		MealPlanID:  currentPlan.ID,
-		RecipeID:    recipe.RecipeID,
-		RecipeTitle: recipe.Title,
-		Image:       recipe.Image,
-		SourceURL:   recipe.URL,
-		Day:         int(payload.Day),
+		ID:         currentPlan.Recipes[payload.Day-1].ID,
+		MealPlanID: currentPlan.ID,
+		Day:        int(payload.Day),
 	}
 
-	if err = app.store.Mealplans.UpdateRecipeForDay(r.Context(), updatedRecipe); err != nil {
+	if payload.UserRecipeID != nil {
+		userRecipe, err := app.store.Recipes.GetByID(r.Context(), *payload.UserRecipeID, claims.UserID)
+		if err == sql.ErrNoRows {
+			jsonutil.WriteError(w, "recipe not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			slog.Error("failed to get user recipe from db", "error", err)
+			jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		updatedRecipe.RecipeID = 0
+		updatedRecipe.RecipeTitle = userRecipe.Title
+		updatedRecipe.Image = userRecipe.Image
+		updatedRecipe.SourceURL = userRecipe.SourceUrl
+		updatedRecipe.Source = models.RecipeSourceUser
+		updatedRecipe.UserRecipeID = &userRecipe.ID
+	} else {
+		recipe, err := app.pickRandomRecipe(r.Context(), claims.UserID)
+		if errors.Is(err, errNoSuitableRecipe) {
+			jsonutil.WriteError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err != nil {
+			slog.Error("could not get random recipe", "error", err)
+			jsonutil.WriteError(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		updatedRecipe.RecipeID = recipe.RecipeID
+		updatedRecipe.RecipeTitle = recipe.Title
+		updatedRecipe.Image = recipe.Image
+		updatedRecipe.SourceURL = recipe.URL
+		updatedRecipe.Source = models.RecipeSourceSpoonacular
+	}
+
+	if err := app.store.Mealplans.UpdateRecipeForDay(r.Context(), updatedRecipe); err != nil {
 		slog.Error("failed to update recipe in the database", "error", err)
 		jsonutil.WriteError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	jsonutil.WriteHttpJson(w, http.StatusOK, updatedRecipe)
+}
+
+func (app *application) pickRandomRecipe(ctx context.Context, userID int64) (*recipeclient.Recipe, error) {
+	user, err := app.store.Users.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	recipes, err := app.recipes.GetRandomRecipes(ctx, 5, user.DietaryPreferences, user.Intolerances, user.ExcludedIngredients)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range recipes {
+		if !containsExcluded(recipes[i], user.ExcludedIngredients) {
+			return &recipes[i], nil
+		}
+	}
+
+	return nil, errNoSuitableRecipe
 }
 
 func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http.Request) {
@@ -233,4 +264,3 @@ func (app *application) regenerateMealPlanHandler(w http.ResponseWriter, r *http
 
 	jsonutil.WriteHttpJson(w, http.StatusOK, plan)
 }
-

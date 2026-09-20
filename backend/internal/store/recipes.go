@@ -265,6 +265,50 @@ func (r *RecipeStore) Delete(ctx context.Context, recipeID, userID int64) error 
 	return nil
 }
 
+func (r *RecipeStore) GetIngredientsByRecipeIDs(ctx context.Context, userID int64, recipeIDs []int64) (map[int64][]models.UserRecipeIngredient, error) {
+	result := make(map[int64][]models.UserRecipeIngredient)
+	if len(recipeIDs) == 0 {
+		return result, nil
+	}
+
+	query := `
+	SELECT i.user_recipe_id, i.name, i.anount, i.unit
+	FROM user_recipe_ingredients i
+	JOIN user_recipes ur ON ur.id = i.user_recipe_id
+	WHERE i.user_recipe_id = ANY($1) AND ur.user_id = $2
+	ORDER BY i.user_recipe_id, i.position
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, pq.Array(recipeIDs), userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var userRecipeID int64
+		var ingredient models.UserRecipeIngredient
+
+		err := rows.Scan(
+			&userRecipeID,
+			&ingredient.Name,
+			&ingredient.Amount,
+			&ingredient.Unit,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[userRecipeID] = append(result[userRecipeID], ingredient)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func insertIngredients(ctx context.Context, tx *sql.Tx, recipeID int64, ingredients []models.UserRecipeIngredient) error {
 	if len(ingredients) == 0 {
 		return nil

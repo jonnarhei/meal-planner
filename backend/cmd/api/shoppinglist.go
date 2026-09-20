@@ -159,36 +159,67 @@ func duplicateItems(items []models.ShoppinglistItem) []models.ShoppinglistItem {
 	return result
 }
 
-func (app *application) generateShoppingListFromPlan(ctx context.Context, userID int64, plan *models.MealPlan) error {
-	ids := make([]int64, len(plan.Recipes))
-	for i, recipe := range plan.Recipes {
-		ids[i] = recipe.RecipeID
+func appendIngredient(items []models.ShoppinglistItem, userID int64, name string, amount float64, unit string) []models.ShoppinglistItem {
+	normalizedUnit := normalizeUnit(unit)
+	if !isValidWholeItem(normalizedUnit) {
+		normalizedUnit = ""
 	}
+	base := toBaseUnit(amount, normalizedUnit)
 
-	recipes, err := app.recipes.GetRecipeInformationBulk(ctx, ids)
+	items = append(items, models.ShoppinglistItem{
+		UserID: userID,
+		Name:   normalizeName(name),
+		Amount: base.amount,
+		Unit:   base.unit,
+		Source: "meal_plan",
+	})
 
-	if err != nil {
-		return err
+	return items
+}
+
+func (app *application) generateShoppingListFromPlan(ctx context.Context, userID int64, plan *models.MealPlan) error {
+	var spoonIDs, userRecipeIDs []int64
+	for _, recipe := range plan.Recipes {
+		switch recipe.Source {
+		case models.RecipeSourceUser:
+			// nil = deleted recipe
+			if recipe.UserRecipeID != nil {
+				userRecipeIDs = append(userRecipeIDs, *recipe.UserRecipeID)
+			}
+		default:
+			spoonIDs = append(spoonIDs, recipe.RecipeID)
+		}
 	}
 
 	var items []models.ShoppinglistItem
-	for _, recipe := range recipes {
-		for _, ingredient := range recipe.Ingredients {
-			if !isValidIngredient(ingredient.Name) || !isValidUnit(ingredient.Unit) {
-				continue
+
+	if len(spoonIDs) > 0 {
+		recipes, err := app.recipes.GetRecipeInformationBulk(ctx, spoonIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, recipe := range recipes {
+			for _, ingredient := range recipe.Ingredients {
+				if !isValidIngredient(ingredient.Name) || !isValidUnit(ingredient.Unit) {
+					continue
+				}
+				items = appendIngredient(items, userID, ingredient.Name, ingredient.Amount, ingredient.Unit)
 			}
-			normalizedUnit := normalizeUnit(ingredient.Unit)
-			if !isValidWholeItem(normalizedUnit) {
-				normalizedUnit = ""
+		}
+	}
+
+	if len(userRecipeIDs) > 0 {
+		ingredientsMap, err := app.store.Recipes.GetIngredientsByRecipeIDs(ctx, userID, userRecipeIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, recipeID := range userRecipeIDs {
+			ingredients := ingredientsMap[recipeID]
+			for _, ingredient := range ingredients {
+				items = appendIngredient(items, userID, ingredient.Name, ingredient.Amount, ingredient.Unit)
 			}
-			base := toBaseUnit(ingredient.Amount, normalizedUnit)
-			items = append(items, models.ShoppinglistItem{
-				UserID: userID,
-				Name:   normalizeName(ingredient.Name),
-				Amount: base.amount,
-				Unit:   base.unit,
-				Source: "meal_plan",
-			})
 		}
 	}
 
