@@ -94,10 +94,10 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 	recipesQuery := `
 	SELECT mpr.id,
 		   mpr.meal_plan_id,
-		   mpr.recipe_id
+		   mpr.recipe_id,
 		   COALESCE(ur.title, mpr.recipe_title),
 		   COALESCE(ur.image, mpr.image),
-		   COALESCE(ur.source_url, mpr.source_id),
+		   COALESCE(ur.source_url, mpr.source_url),
 		   mpr.day,
 		   mpr.source,
 		   mpr.user_recipe_id
