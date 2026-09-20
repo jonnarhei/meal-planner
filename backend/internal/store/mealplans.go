@@ -21,8 +21,8 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 
 	// Insert meal plan
 	query := `
-	INSERT INTO meal_plans (user_id, start_date, end_date, source, user_recipe_id)
-	VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at
+	INSERT INTO meal_plans (user_id, start_date, end_date)
+	VALUES ($1, $2, $3) RETURNING id, created_at
 	`
 
 	err = tx.QueryRowContext(
@@ -43,8 +43,8 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 	// insert recipes
 	for _, recipe := range mealPlan.Recipes {
 		query := `
-		INSERT INTO meal_plan_recipes (meal_plan_id, recipe_id, recipe_title, image, source_url, day)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO meal_plan_recipes (meal_plan_id, recipe_id, recipe_title, image, source_url, day, source, user_recipe_id)
+		VALUES ($1, $2, $3, $4, $5, $6,  $7, $8)
 		`
 
 		_, err := tx.ExecContext(ctx, query,
@@ -54,6 +54,8 @@ func (m *MealPlanStore) Create(ctx context.Context, mealPlan *models.MealPlan) e
 			recipe.Image,
 			recipe.SourceURL,
 			recipe.Day,
+			recipe.Source,
+			recipe.UserRecipeID,
 		)
 
 		if err != nil {
@@ -94,7 +96,7 @@ func (m *MealPlanStore) GetCurrent(ctx context.Context, userID int64) (*models.M
 		   mpr.meal_plan_id,
 		   mpr.recipe_id
 		   COALESCE(ur.title, mpr.recipe_title),
-		   COALESCE(ur.image, mpt.image),
+		   COALESCE(ur.image, mpr.image),
 		   COALESCE(ur.source_url, mpr.source_id),
 		   mpr.day,
 		   mpr.source,

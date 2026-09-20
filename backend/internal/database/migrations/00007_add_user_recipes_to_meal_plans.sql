@@ -1,7 +1,7 @@
 -- +goose Up
-ALTER TABLE meal_plan_recipes
-    ADD COLUMN source TEXT NOT NULL DEFAULT 'spoonacular'
-    ADD COULMN user_recipe_id BIGINT REFERENCES user_recipes(id) ON DELETE SET NULL;
+ALTER TABLE meal_plan_recipes 
+    ADD COLUMN source TEXT NOT NULL DEFAULT 'spoonacular',
+    ADD COLUMN user_recipe_id BIGINT REFERENCES user_recipes(id) ON DELETE SET NULL;
 
 ALTER TABLE meal_plan_recipes
     ADD CONSTRAINT meal_plan_recipes_source_check CHECK (source IN ('spoonacular', 'user'));
