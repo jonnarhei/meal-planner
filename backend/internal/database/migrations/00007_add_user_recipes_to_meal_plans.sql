@@ -10,6 +10,6 @@ CREATE INDEX IF NOT EXISTS idx_meal_plan_recipes_user_recipe_id ON meal_plan_rec
 
 -- +goose Down
 DROP INDEX IF EXISTS idx_meal_plan_recipes_user_recipe_id;
-ALTER TABLE meal_plan_recipes DROP CONSTRAINT IF EXISTS meal_plan_recipes_source_check
+ALTER TABLE meal_plan_recipes DROP CONSTRAINT IF EXISTS meal_plan_recipes_source_check;
 ALTER TABLE meal_plan_recipes DROP COLUMN IF EXISTS user_recipe_id;
 ALTER TABLE meal_plan_recipes DROP COLUMN IF EXISTS source;
