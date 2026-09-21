@@ -7,17 +7,19 @@ import ProtectedRoute from "./components/ProtectedRoutes"
 import Profile from "./pages/Profile"
 import DietaryPreferences from "./pages/Preferences"
 import ShoppingList from "./pages/ShoppingList"
+import MyRecipes from "./pages/MyRecipes"
+import RecipeForm from "./pages/RecipeForm"
 
 
 function App() {
   const { isAuthenticated } = useAuth()
-  
+
   return (
     <Routes>
       <Route path="/" element={
-        isAuthenticated ? <Navigate to="/meal-plan"/> : <Navigate to="/login"/>
+        isAuthenticated ? <Navigate to="/meal-plan" /> : <Navigate to="/login" />
       } />
-      
+
       <Route path="/login" element={<Login />} />
 
       <Route path="/register" element={<Register />} />
@@ -32,7 +34,7 @@ function App() {
         <ProtectedRoute>
           <Profile />
         </ProtectedRoute>
-      }/>
+      } />
 
       <Route path="/dietary-preferences" element={
         <ProtectedRoute>
@@ -43,6 +45,24 @@ function App() {
       <Route path="/shopping-list" element={
         <ProtectedRoute>
           <ShoppingList />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/recipes" element={
+        <ProtectedRoute>
+          <MyRecipes />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/recipes/new" element={
+        <ProtectedRoute>
+          <RecipeForm />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/recipes/:id/edit" element={
+        <ProtectedRoute>
+          <RecipeForm />
         </ProtectedRoute>
       } />
     </Routes>

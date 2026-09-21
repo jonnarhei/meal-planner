@@ -2,12 +2,15 @@ import client from "./client";
 import type { MealPlan, MealPlanRecipe } from "./types";
 
 export async function getCurrentMealPlan(): Promise<MealPlan> {
-    const response = await client.get('/meal-plans/current') 
+    const response = await client.get('/meal-plans/current')
     return response.data
 }
 
-export async function changeRecipeForDay(day:number): Promise<MealPlanRecipe> {
-    const response = await client.patch('/meal-plans/current/recipe', { day })
+export async function changeRecipeForDay(day: number, userRecipeId?: number): Promise<MealPlanRecipe> {
+    const response = await client.patch('/meal-plans/current/recipe', {
+        day,
+        ...(userRecipeId !== undefined && { user_recipe_id: userRecipeId }),
+    })
     return response.data
 }
 
