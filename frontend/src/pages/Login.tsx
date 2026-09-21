@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext"
 import { Link, useNavigate } from "react-router-dom"
 import { login } from "../api/auth"
 import toast from "react-hot-toast"
+import PasswordInput from "../components/PasswordInput"
 
 function Login() {
     const [email, setEmail] = useState('')
@@ -14,10 +15,10 @@ function Login() {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        setLoading(true) 
+        setLoading(true)
 
         try {
-            const data = await login({email, password})
+            const data = await login({ email, password })
             setToken(data.token)
             navigate('/meal-plan')
         } catch (err) {
@@ -33,7 +34,7 @@ function Login() {
                 <h1 className="text-3xl font-bold text-orange-600 mb-2">Meal Planner</h1>
                 <p className="text-gray-500 mb-6">Sign into your account</p>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4"> 
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <input
                         type="email"
                         placeholder="Email"
@@ -41,30 +42,24 @@ function Login() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
                     />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    />
-                    <button 
-                        type="submit" 
+                    <PasswordInput value={password} onChange={setPassword} />
+                    <button
+                        type="submit"
                         disabled={loading}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors diabled:opacity-50"
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
                     >
                         {loading ? 'Logging in...' : 'Log in'}
                     </button>
                 </form>
                 <p className="text-sm text-gray-500 mt-6 text-center">
-                    Don't have an account? {' '} 
+                    Don't have an account? {' '}
                     <Link to="/register" className="text-orange-500 hover:underline font-medium">
                         Register
                     </Link>
                 </p>
             </div>
         </div>
-        
+
     )
 }
 
