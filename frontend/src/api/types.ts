@@ -6,6 +6,8 @@ export interface MealPlanRecipe {
     image: string
     source_url: string
     day: number
+    source: 'spoonacular' | 'user'
+    user_recipe_id: number | null
 }
 
 export interface MealPlan {
@@ -58,4 +60,34 @@ export interface ShoppingListItem {
     checked: boolean
     source: string
     created_at: string
+}
+
+export interface UserRecipeIngredient {
+    id: number
+    name: string
+    amount: number
+    unit: string
+    position: number
+}
+
+export interface UserRecipe {
+    id: number
+    user_id: number
+    title: string
+    image: string
+    source_url: string
+    instructions: string
+    servings: number
+    ingredients: UserRecipeIngredient[] | null
+    created_at: string
+    updated_at: string
+}
+
+export interface RecipeInput {
+    title: string
+    image: string
+    source_url: string
+    instructions: string
+    servings: number
+    ingredients: { name: string; amount: number; unit: string }[]
 }

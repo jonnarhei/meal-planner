@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 function HamburgerMenu() {
     const [open, setOpen] = useState(false)
-    
-    const {setToken} = useAuth()
+
+    const { setToken } = useAuth()
     const navigate = useNavigate()
     const menuRef = useRef<HTMLDivElement>(null)
 
@@ -39,7 +39,7 @@ function HamburgerMenu() {
 
             {open && (
                 <div className="absolute left-0 top-12 bg-white rounded shadow-lg border border-orange-100 w-48 py-2 z-50">
-                    <button 
+                    <button
                         onClick={() => { navigate('/profile'); setOpen(false) }}
                         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
                     >
@@ -47,14 +47,21 @@ function HamburgerMenu() {
                     </button>
                     <hr className="my-1 border-orange-100" />
                     <button
-                        onClick={() => { navigate('/meal-plan'); setOpen(false)}}
+                        onClick={() => { navigate('/meal-plan'); setOpen(false) }}
                         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
                     >
                         Meal Plan
                     </button>
                     <hr className="my-1 border-orange-100" />
                     <button
-                        onClick={() => {navigate('/shopping-list'); setOpen(false)}}
+                        onClick={() => { navigate('/recipes'); setOpen(false) }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
+                    >
+                        My Recipes
+                    </button>
+                    <hr className="my-1 border-orange-100" />
+                    <button
+                        onClick={() => { navigate('/shopping-list'); setOpen(false) }}
                         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 transition-colors"
                     >
                         Shopping List

@@ -82,6 +82,15 @@ func (app *application) mount() http.Handler {
 		r.Post("/current/regenerate", app.regenerateMealPlanHandler)
 	})
 
+	router.Route("/recipes", func(r chi.Router) {
+		r.Use(app.AuthMiddleware)
+		r.Get("/", app.listRecipesHandler)
+		r.Post("/", app.createRecipeHandler)
+		r.Get("/{id}", app.getRecipeHandler)
+		r.Put("/{id}", app.updateRecipeHandler)
+		r.Delete("/{id}", app.deleteRecipeHandler)
+	})
+
 	router.Route("/shopping-list", func(r chi.Router) {
 		r.Use(app.AuthMiddleware)
 		r.Get("/", app.getShoppingListHandler)

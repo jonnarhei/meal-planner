@@ -2,6 +2,11 @@ package models
 
 import "time"
 
+const (
+	RecipeSourceSpoonacular = "spoonacular"
+	RecipeSourceUser        = "user"
+)
+
 type MealPlan struct {
 	ID        int64            `json:"id"`
 	UserID    int64            `json:"user_id"`
@@ -12,11 +17,13 @@ type MealPlan struct {
 }
 
 type MealPlanRecipe struct {
-	ID          int64  `json:"id"`
-	MealPlanID  int64  `json:"meal_plan_id"`
-	RecipeID    int64  `json:"recipe_id"`
-	RecipeTitle string `json:"recipe_title"`
-	Image       string `json:"image"`
-	SourceURL   string `json:"source_url"`
-	Day         int    `json:"day"`
+	ID           int64  `json:"id"`
+	MealPlanID   int64  `json:"meal_plan_id"`
+	RecipeID     int64  `json:"recipe_id"`
+	RecipeTitle  string `json:"recipe_title"`
+	Image        string `json:"image"`
+	SourceURL    string `json:"source_url"`
+	Day          int    `json:"day"`
+	Source       string `json:"source"`
+	UserRecipeID *int64 `json:"user_recipe_id"`
 }
