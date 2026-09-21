@@ -52,51 +52,51 @@ function MyRecipes() {
         <div className="min-h-screen bg-orange-50">
 
             <div className="bg-white shadow-sm">
-                <div className="max-w-screen-2x1 mx-auto px-6 py-4 flex justify-between items-center">
+                <div className="max-w-screen-2xl mx-auto px-6 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <HamburgerMenu />
-                        <h1 className="text-2x1 font-bold text-orange-600">My Recipes</h1>
+                        <h1 className="text-2xl font-bold text-orange-600">My Recipes</h1>
                     </div>
                     <button
                         onClick={() => navigate('/recipes/new')}
-                        className="bg-orange-500 hoved:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-x1 transition-colors"
+                        className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
                     >
                         New Recipe
                     </button>
                 </div>
             </div>
 
-            <div className="max-w-screen-2x1 mx-auto px-6 py-8">
+            <div className="max-w-screen-2xl mx-auto px-6 py-8">
                 {recipes.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">
                         <p className="text-lg mb-2">You haven't added any recipes yet</p>
                         <p className="text-sm mb-6">Add your own recipes to use them in your meal plan</p>
                         <button
                             onClick={() => navigate('/recipes/new')}
-                            className="bg-orange-100 hover:bg-orange-200 text-orange-600 text text-sm font-semibold px-4 py-2 rounded-x1 transition-colors"
+                            className="bg-orange-100 hover:bg-orange-200 text-orange-600 text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
                         >
                             Add your first recipe
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cold-4 2x1:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                         {recipes.map(recipe => {
                             const ingredientCount = recipe.ingredients?.length ?? 0
 
                             return (
                                 <div
                                     key={recipe.id}
-                                    className="bg-white rounded-3x1 shadow-md border border-orange-100 overflow-hidden flex flex-col"
+                                    className="bg-white rounded-3xl shadow-md border border-orange-100 overflow-hidden flex flex-col"
                                 >
                                     {recipe.image ? (
                                         <img
                                             src={recipe.image}
                                             alt={recipe.title}
                                             onError={e => { e.currentTarget.style.display = 'none' }}
-                                            className="w-full h-40 object-cover-object-center"
+                                            className="w-full h-40 object-cover object-center"
                                         />
                                     ) : (
-                                        <div className="w-full h-40 bg-orange-100 flex items-center justify-center text-orange-300 text-4x1">
+                                        <div className="w-full h-40 bg-orange-100 flex items-center justify-center text-orange-300 text-4xl">
                                             🍽
                                         </div>
                                     )}
