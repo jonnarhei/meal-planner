@@ -5,6 +5,7 @@ import HamburgerMenu from "./HamburgerMenu"
 import toast from "react-hot-toast"
 import { getRecipes } from "../api/recipes"
 import { useNavigate } from "react-router-dom"
+import ChangeRecipePopover from "../components/ChangeRecipePopover"
 
 function MealPlanPage() {
     const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
@@ -121,18 +122,18 @@ function MealPlanPage() {
             </div>
 
             <div className="max-w-screen-2xl mx-auto px-6 py-8">
-                <h2 className="text-x1 font-semibold text-gray-700 mb-6">This Week's Meals</h2>
+                <h2 className="text-xl font-semibold text-gray-700 mb-6">This Week's Meals</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                     {mealPlan.recipes.map((recipe) => (
-                        <div key={recipe.day} className="bg-white rounded-3xl shadow-md border border-orange-100 overflow-hidden flex flex-col">
+                        <div key={recipe.day} className="bg-white rounded-3xl shadow-md border border-orange-100 flex flex-col">
                             {recipe.image ? (
                                 <img
                                     src={recipe.image}
                                     alt={recipe.recipe_title}
-                                    className="w-full h-40 object-cover object-center"
+                                    className="w-full h-40 object-cover object-center rounded-t-3xl"
                                 />
                             ) : (
-                                <div className="w-full h-40 object-cover object-center">
+                                <div className="w-full h-40 bg-orange-100 flex items-center justify-center text-orange-300 text-4xl rounded-t-3xl">
                                     🍽
                                 </div>
                             )}
@@ -155,19 +156,17 @@ function MealPlanPage() {
                                         <a
                                             href={recipe.source_url}
                                             target="_blank"
-                                            rel="norefferer"
-                                            className="text-xs text-orange-500 hover-underline fond-medium"
+                                            rel="noreferrer"
+                                            className="text-xs text-orange-500 hover:underline font-medium"
                                         >
                                             View Recipe
                                         </a>
                                     ) : <span />}
-                                    <button
-                                        onClick={() => openPicker(recipe.day)}
-                                        disabled={changingDay === recipe.day}
-                                        className="text-cs bg-orange-100 hover:bg-orange-200 test-orange-600 font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {changingDay === recipe.day ? 'Changing...' : 'Change'}
-                                    </button>
+                                    <ChangeRecipePopover
+                                        busy={changingDay === recipe.day}
+                                        onSurprise={() => handleRecipeChange(recipe.day)}
+                                        onUseOwn={() => openPicker(recipe.day)}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -181,7 +180,7 @@ function MealPlanPage() {
                     onClick={() => setPickerDay(null)}
                 >
                     <div
-                        className="bg-white rounded-3x1 shadow-lg border border-orange-100 w-full max-w-md max-h-[80vh] flex flex-col"
+                        className="bg-white rounded-3xl shadow-lg border border-orange-100 w-full max-w-md max-h-[80vh] flex flex-col"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between p-5 border-b border-orange-100">
@@ -196,20 +195,7 @@ function MealPlanPage() {
                             </button>
                         </div>
 
-                        <div className="p-5 border-b border-orange-100">
-                            <button
-                                onClick={() => handleRecipeChange(pickerDay)}
-                                className="w-full bg-orange-500 hover:text-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-x1 transition-colors"
-                            >
-                                Surprise me
-                            </button>
-                        </div>
-
                         <div className="p-5 overflow-y-auto">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                Or pick your own
-                            </p>
-
                             {loadingRecipes ? (
                                 <p className="text-sm text-gray-400 text-center py-4">Loading...</p>
                             ) : (myRecipes?.length ?? 0) === 0 ? (
