@@ -272,7 +272,7 @@ func (r *RecipeStore) GetIngredientsByRecipeIDs(ctx context.Context, userID int6
 	}
 
 	query := `
-	SELECT i.user_recipe_id, i.name, i.anount, i.unit
+	SELECT i.user_recipe_id, i.name, i.amount, i.unit
 	FROM user_recipe_ingredients i
 	JOIN user_recipes ur ON ur.id = i.user_recipe_id
 	WHERE i.user_recipe_id = ANY($1) AND ur.user_id = $2
