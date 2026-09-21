@@ -3,10 +3,12 @@ import { Link, useNavigate } from "react-router-dom"
 import { login, register } from "../api/auth"
 import { useAuth } from "../context/AuthContext"
 import toast from "react-hot-toast"
+import PasswordInput from "../components/PasswordInput"
 
 function Register() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
     const [loading, setLoading] = useState(false)
 
     const { setToken } = useAuth()
@@ -16,8 +18,13 @@ function Register() {
         e.preventDefault()
         setLoading(true)
 
+        if (password !== confirmPassword) {
+            toast.error('Passwords do not match')
+            return
+        }
+
         try {
-            await register({email, password})
+            await register({ email, password })
             const data = await login({ email, password })
             setToken(data.token)
             navigate('/dietary-preferences')
@@ -42,17 +49,15 @@ function Register() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
                     />
-                    <input 
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)} 
-                        className="border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    />
-                    <button 
-                        type="submit" 
+                    <PasswordInput value={password} onChange={setPassword} />
+                    <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeHolder="Confirm password" />
+                    {confirmPassword && password !== confirmPassword && (
+                        <p className="text-sm text-red-500 -mt-2">Passwords do not match</p>
+                    )}
+                    <button
+                        type="submit"
                         disabled={loading}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors diabled:opacity-50"
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
                     >
                         {loading ? 'Registering user...' : 'Register user'}
                     </button>
