@@ -115,7 +115,7 @@ function AppLayout() {
                                 `px-3.5 py-2.5 rounded-[10px] text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300
                                 ${isActive
                                     ? 'bg-white text-stone-900 font-bold shadow-[0_1px_3px_rgba(120,53,15,0.12)]'
-                                    : 'text-stone-600 font-medium hover:text-stone-900'
+                                    : 'text-stone-600 font-medium hover:bg-orange-100 hover:text-stone-900'
                                 }`
                             }
                         >
@@ -125,7 +125,7 @@ function AppLayout() {
 
                     <button
                         onClick={handleLogout}
-                        className="mt-auto text-left px-3.5 py-2.5 rounded-[10px] text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                        className="mt-auto text-left px-3.5 py-2.5 rounded-[10px] text-sm text-red-600 transition-colors hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                     >
                         Sign out
                     </button>
