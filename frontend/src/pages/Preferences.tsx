@@ -33,9 +33,6 @@ function DietaryPreferences() {
             <div className="flex-1 flex justify-center px-8 pb-8">
                 <div className="w-full max-w-[520px] self-start bg-white border border-orange-200 rounded-3xl p-8 flex flex-col gap-6">
                     <div className="flex flex-col gap-1.5">
-                        <span className="text-xs font-bold uppercase tracking-[0.08em] text-orange-500">
-                            Step 1 of 1
-                        </span>
                         <span className="text-[26px] font-bold tracking-[-0.01em]">How do you eat?</span>
                         <span className="text-sm text-stone-500">
                             Help us tailor your meal plan to your needs. You can change this later in Profile.
