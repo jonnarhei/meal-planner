@@ -4,6 +4,7 @@ import MealPlanPage from "./pages/MealPlan"
 import Register from "./pages/Register"
 import { useAuth } from "./context/AuthContext"
 import ProtectedRoute from "./components/ProtectedRoutes"
+import AppLayout from "./components/AppLayout"
 import Profile from "./pages/Profile"
 import DietaryPreferences from "./pages/Preferences"
 import ShoppingList from "./pages/ShoppingList"
@@ -24,33 +25,25 @@ function App() {
 
       <Route path="/register" element={<Register />} />
 
-      <Route path="/meal-plan" element={
+      {/* Protected pages that live inside the app shell */}
+      <Route element={
         <ProtectedRoute>
-          <MealPlanPage />
+          <AppLayout />
         </ProtectedRoute>
-      } />
+      }>
+        <Route path="/meal-plan" element={<MealPlanPage />} />
 
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
+        <Route path="/profile" element={<Profile />} />
 
+        <Route path="/shopping-list" element={<ShoppingList />} />
+
+        <Route path="/recipes" element={<MyRecipes />} />
+      </Route>
+
+      {/* Protected pages that render on their own */}
       <Route path="/dietary-preferences" element={
         <ProtectedRoute>
           <DietaryPreferences />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/shopping-list" element={
-        <ProtectedRoute>
-          <ShoppingList />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/recipes" element={
-        <ProtectedRoute>
-          <MyRecipes />
         </ProtectedRoute>
       } />
 

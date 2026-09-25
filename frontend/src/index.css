@@ -1,2 +1,5 @@
-@import "tailwindcss"
+@import "tailwindcss";
 
+@theme {
+    --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}

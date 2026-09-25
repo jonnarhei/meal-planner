@@ -3,12 +3,16 @@ import type { UserRecipe } from "../api/types";
 import { useNavigate } from "react-router-dom";
 import { deleteRecipe, getRecipes } from "../api/recipes";
 import toast from "react-hot-toast";
-import HamburgerMenu from "./HamburgerMenu";
+import RecipeThumb from "../components/RecipeThumb";
+import EmptyState from "../components/EmptyState";
+
+const columns = "grid grid-cols-[minmax(0,1fr)_140px_110px_150px] gap-4 px-5"
 
 function MyRecipes() {
     const [recipes, setRecipes] = useState<UserRecipe[]>([])
     const [loading, setLoading] = useState(true)
     const [deletingId, setDeletingId] = useState<number | null>(null)
+    const [query, setQuery] = useState('')
 
     const navigate = useNavigate()
 
@@ -42,111 +46,123 @@ function MyRecipes() {
         }
     }
 
-    if (loading) return (
-        <div className="min-h-screen bg-orange-50 flex items-center justify-center">
-            <p className="text-orange-500 text-lg font-medium">Loading your recipes...</p>
-        </div>
+    if (loading) return <RecipesSkeleton />
+
+    if (recipes.length === 0) return (
+        <EmptyState
+            visual={
+                <RecipeThumb stripe={6} className="w-[72px] h-[72px] rounded-2xl" />
+            }
+            title="Your recipe book is empty"
+            description={'Add the dinners you already make. They can go into your plan with "Use my own".'}
+            actionLabel="Add your first recipe"
+            onAction={() => navigate('/recipes/new')}
+        />
+    )
+
+    const visible = recipes.filter(recipe =>
+        recipe.title.toLowerCase().includes(query.trim().toLowerCase())
     )
 
     return (
-        <div className="min-h-screen bg-orange-50">
+        <div className="max-w-[920px] flex flex-col gap-4">
 
-            <div className="bg-white shadow-sm">
-                <div className="max-w-screen-2xl mx-auto px-6 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <HamburgerMenu />
-                        <h1 className="text-2xl font-bold text-orange-600">My Recipes</h1>
-                    </div>
-                    <button
-                        onClick={() => navigate('/recipes/new')}
-                        className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-                    >
-                        New Recipe
-                    </button>
-                </div>
+            <div className="flex gap-2.5">
+                <input
+                    type="text"
+                    placeholder="Search recipes"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    className="flex-1 border border-stone-200 rounded-[10px] bg-stone-50 px-3.5 py-2.5 text-[15px] outline-none transition-colors focus:border-orange-400"
+                />
+                <button
+                    onClick={() => navigate('/recipes/new')}
+                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-[18px] rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                >
+                    New recipe
+                </button>
             </div>
 
-            <div className="max-w-screen-2xl mx-auto px-6 py-8">
-                {recipes.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
-                        <p className="text-lg mb-2">You haven't added any recipes yet</p>
-                        <p className="text-sm mb-6">Add your own recipes to use them in your meal plan</p>
-                        <button
-                            onClick={() => navigate('/recipes/new')}
-                            className="bg-orange-100 hover:bg-orange-200 text-orange-600 text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            <div className="border border-stone-200 rounded-[14px] overflow-hidden">
+                <div className={`${columns} py-2.5 bg-stone-50 text-xs font-semibold uppercase tracking-[0.04em] text-stone-500`}>
+                    <span>Recipe</span>
+                    <span>Ingredients</span>
+                    <span>Servings</span>
+                    <span />
+                </div>
+
+                {visible.length === 0 ? (
+                    <p className="border-t border-stone-100 px-5 py-6 text-sm text-stone-500">
+                        No recipes match "{query.trim()}".
+                    </p>
+                ) : visible.map(recipe => {
+                    const ingredientCount = recipe.ingredients?.length ?? 0
+
+                    return (
+                        <div
+                            key={recipe.id}
+                            className={`${columns} py-2.5 items-center border-t border-stone-100`}
                         >
-                            Add your first recipe
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                        {recipes.map(recipe => {
-                            const ingredientCount = recipe.ingredients?.length ?? 0
+                            <div className="flex items-center gap-3 min-w-0">
+                                <RecipeThumb
+                                    src={recipe.image}
+                                    alt=""
+                                    className="w-10 h-10 flex-none rounded-[9px]"
+                                />
+                                <span className="text-[15px] font-semibold truncate">{recipe.title}</span>
+                            </div>
 
-                            return (
-                                <div
-                                    key={recipe.id}
-                                    className="bg-white rounded-3xl shadow-md border border-orange-100 overflow-hidden flex flex-col"
+                            <span className="text-sm text-stone-600">
+                                {ingredientCount === 0 ? '—' : ingredientCount}
+                            </span>
+                            <span className="text-sm text-stone-600">
+                                {recipe.servings > 0 ? recipe.servings : '—'}
+                            </span>
+
+                            <div className="flex justify-end gap-1">
+                                <button
+                                    onClick={() => navigate(`/recipes/${recipe.id}/edit`)}
+                                    className="text-sm font-semibold text-orange-700 hover:bg-orange-50 rounded-lg px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                                 >
-                                    {recipe.image ? (
-                                        <img
-                                            src={recipe.image}
-                                            alt={recipe.title}
-                                            onError={e => { e.currentTarget.style.display = 'none' }}
-                                            className="w-full h-40 object-cover object-center"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-40 bg-orange-100 flex items-center justify-center text-orange-300 text-4xl">
-                                            🍽
-                                        </div>
-                                    )}
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(recipe)}
+                                    disabled={deletingId === recipe.id}
+                                    className="text-sm text-red-600 hover:bg-red-50 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                                >
+                                    {deletingId === recipe.id ? '...' : 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
 
-                                    <div className="p-4 flex flex-col flex-1">
-                                        <h3 className="text-gray-800 font-semibold text-sm mb-2 leading-snug flex-1">
-                                            {recipe.title}
-                                        </h3>
+function RecipesSkeleton() {
+    return (
+        <div className="max-w-[920px] flex flex-col gap-4 animate-pulse">
+            <div className="flex gap-2.5">
+                <div className="flex-1 h-[42px] rounded-[10px] bg-stone-100" />
+                <div className="w-[120px] h-[42px] rounded-[10px] bg-stone-100" />
+            </div>
 
-                                        <p className="text-xs text-gray-400 mb-3">
-                                            {ingredientCount === 0
-                                                ? 'No ingredients'
-                                                : `${ingredientCount} ingredient${ingredientCount > 1 ? 's' : ''}`}
-                                            {recipe.servings > 0 && ` ·${recipe.servings} servings`}
-                                        </p>
-
-                                        <div className="flex items-center justify-between">
-                                            {recipe.source_url ? (
-                                                <a
-                                                    href={recipe.source_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-xs text-orange-500 hover:underline font-medium"
-                                                >
-                                                    View Source
-                                                </a>
-                                            ) : <span />}
-
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => navigate(`/recipes/${recipe.id}/edit`)}
-                                                    className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-600 font-medium px-3 py-1.5 rounded-lg transition-colors"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(recipe)}
-                                                    disabled={deletingId === recipe.id}
-                                                    className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1.5 transition-colors disabled:opacity-50"
-                                                >
-                                                    {deletingId === recipe.id ? '...' : 'Delete'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        })}
+            <div className="border border-stone-200 rounded-[14px] overflow-hidden">
+                <div className="h-[38px] bg-stone-50" />
+                {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className={`${columns} py-2.5 items-center border-t border-stone-100`}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 flex-none rounded-[9px] bg-stone-100" />
+                            <div className="h-[11px] w-[55%] rounded-md bg-stone-100" />
+                        </div>
+                        <div className="h-[11px] w-8 rounded-md bg-stone-50" />
+                        <div className="h-[11px] w-6 rounded-md bg-stone-50" />
+                        <span />
                     </div>
-                )}
+                ))}
             </div>
         </div>
     )
