@@ -38,44 +38,31 @@ func isValidIngredient(name string) bool {
 	return true
 }
 
-func isValidUnit(unit string) bool {
-	invalid := []string{"serving", "servings"}
-	normalized := strings.ToLower(strings.TrimSpace(unit))
-	for _, u := range invalid {
-		if normalized == u {
-			return false
-		}
+var (
+	// spoonacular sometimes reports "2 servings" as the unit, don't like that
+	invalidUnits = map[string]bool{
+		"serving":  true,
+		"servings": true,
 	}
 
-	return true
+	// sizes like "2 large onions", don't like this either
+	invalidWholeItems = map[string]bool{
+		"large":   true,
+		"medium":  true,
+		"small":   true,
+		"smalls":  true,
+		"mediums": true,
+		"larges":  true,
+	}
+)
+
+func isValidUnit(unit string) bool {
+	return !invalidUnits[strings.ToLower(strings.TrimSpace(unit))]
 }
 
 // checks if unit is large, medium, small etc. want to remove those
 func isValidWholeItem(item string) bool {
-	invalid := []string{"large", "medium", "small", "smalls", "mediums", "larges"}
-	normalized := strings.ToLower(strings.TrimSpace(item))
-
-	for _, inv := range invalid {
-		if normalized == inv {
-			return false
-		}
-	}
-
-	return true
-}
-
-func normalizeName(name string) string {
-	name = strings.ToLower(strings.TrimSpace(name))
-
-	// dont want to strip short words that may normally end in "es" or "s"
-	if strings.HasSuffix(name, "es") && len(name) > 5 {
-		return strings.TrimSuffix(name, "es")
-	}
-	if strings.HasSuffix(name, "s") && len(name) > 4 {
-		return strings.TrimSuffix(name, "s")
-	}
-
-	return name
+	return !invalidWholeItems[strings.ToLower(strings.TrimSpace(item))]
 }
 
 func normalizeUnit(unit string) string {
@@ -137,8 +124,9 @@ func toBaseUnit(amount float64, unit string) measurement {
 }
 
 // fix for ON DUPLICATE giving errors on batch inserts into db
-func duplicateItems(items []models.ShoppinglistItem) []models.ShoppinglistItem {
+func aggregateItems(items []models.ShoppinglistItem) []models.ShoppinglistItem {
 	type key struct {
+		id   int64
 		name string
 		unit string
 	}
@@ -147,19 +135,25 @@ func duplicateItems(items []models.ShoppinglistItem) []models.ShoppinglistItem {
 	var result []models.ShoppinglistItem
 
 	for _, item := range items {
-		k := key{name: item.Name, unit: item.Unit}
-		if idx, exists := seen[k]; exists {
-			result[idx].Amount += item.Amount
+		k := key{unit: item.Unit}
+		if item.IngredientID != nil {
+			k.id = *item.IngredientID
 		} else {
-			seen[k] = len(result)
-			result = append(result, item)
+			k.name = item.Name
 		}
+
+		if idx, ok := seen[k]; ok {
+			result[idx].Amount += item.Amount
+			continue
+		}
+		seen[k] = len(result)
+		result = append(result, item)
 	}
 
 	return result
 }
 
-func appendIngredient(items []models.ShoppinglistItem, userID int64, name string, amount float64, unit string) []models.ShoppinglistItem {
+func appendIngredient(items []models.ShoppinglistItem, userID int64, ingredientID *int64, name string, amount float64, unit string) []models.ShoppinglistItem {
 	normalizedUnit := normalizeUnit(unit)
 	if !isValidWholeItem(normalizedUnit) {
 		normalizedUnit = ""
@@ -167,11 +161,12 @@ func appendIngredient(items []models.ShoppinglistItem, userID int64, name string
 	base := toBaseUnit(amount, normalizedUnit)
 
 	items = append(items, models.ShoppinglistItem{
-		UserID: userID,
-		Name:   normalizeName(name),
-		Amount: base.amount,
-		Unit:   base.unit,
-		Source: "meal_plan",
+		UserID:       userID,
+		IngredientID: ingredientID,
+		Name:         strings.ToLower(strings.TrimSpace(name)),
+		Amount:       base.amount,
+		Unit:         base.unit,
+		Source:       "meal_plan",
 	})
 
 	return items
@@ -204,7 +199,12 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 				if !isValidIngredient(ingredient.Name) || !isValidUnit(ingredient.Unit) {
 					continue
 				}
-				items = appendIngredient(items, userID, ingredient.Name, ingredient.Amount, ingredient.Unit)
+				var ingredientID *int64
+				if ingredient.ID != 0 {
+					id := ingredient.ID
+					ingredientID = &id
+				}
+				items = appendIngredient(items, userID, ingredientID, ingredient.Name, ingredient.Amount, ingredient.Unit)
 			}
 		}
 	}
@@ -218,12 +218,12 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 		for _, recipeID := range userRecipeIDs {
 			ingredients := ingredientsMap[recipeID]
 			for _, ingredient := range ingredients {
-				items = appendIngredient(items, userID, ingredient.Name, ingredient.Amount, ingredient.Unit)
+				items = appendIngredient(items, userID, nil, ingredient.Name, ingredient.Amount, ingredient.Unit)
 			}
 		}
 	}
 
-	items = duplicateItems(items)
+	items = aggregateItems(items)
 
 	return app.store.Shoppinglist.AddItems(ctx, userID, items)
 }

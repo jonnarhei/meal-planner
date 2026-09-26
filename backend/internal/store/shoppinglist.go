@@ -25,18 +25,18 @@ func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []
 	defer tx.Rollback()
 
 	valueStrings := make([]string, len(items))
-	valueArgs := make([]interface{}, 0, len(items)*5)
+	valueArgs := make([]interface{}, 0, len(items)*6)
 
 	for i, item := range items {
-		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", (i*5)+1, (i*5)+2, (i*5)+3, (i*5)+4, (i*5)+5)
-		valueArgs = append(valueArgs, item.UserID, item.Name, item.Amount, item.Unit, item.Source)
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", (i*6)+1, (i*6)+2, (i*6)+3, (i*6)+4, (i*6)+5, (i*6)+6)
+		valueArgs = append(valueArgs, item.UserID, item.IngredientID, item.Name, item.Amount, item.Unit, item.Source)
 	}
 
 	query := fmt.Sprintf(`
-	INSERT INTO shopping_list_items (user_id, name, amount, unit, source)
+	INSERT INTO shopping_list_items (user_id, ingredient_id, name, amount, unit, source)
 	VALUES %s
-	ON CONFLICT (user_id, name, unit)
-	DO UPDATE SET amount = shopping_list_items.amount + EXCLUDED.amount
+	ON CONFLICT (user_id, agg_key, unit)
+	DO UPDATE SET amount = shopping_list_items.amount + EXCLUDED.amount, name = LEAST(shopping_list_items.name, EXCLUDED.name)
 	`, strings.Join(valueStrings, ","))
 
 	_, err = tx.ExecContext(ctx, query, valueArgs...)
@@ -49,7 +49,7 @@ func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []
 
 func (s *ShoppinglistStore) GetAll(ctx context.Context, userID int64) ([]models.ShoppinglistItem, error) {
 	query := `
-	SELECT id, user_id, name, amount, unit, checked, source, created_at
+	SELECT id, user_id, ingredient_id, name, amount, unit, checked, source, created_at
 	FROM shopping_list_items
 	WHERE user_id = $1
 	`
@@ -67,6 +67,7 @@ func (s *ShoppinglistStore) GetAll(ctx context.Context, userID int64) ([]models.
 		err := rows.Scan(
 			&item.ID,
 			&item.UserID,
+			&item.IngredientID,
 			&item.Name,
 			&item.Amount,
 			&item.Unit,

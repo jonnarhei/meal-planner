@@ -11,6 +11,7 @@ type Recipe struct {
 }
 
 type Ingredient struct {
+	ID     int64
 	Name   string
 	Amount float64
 	Unit   string

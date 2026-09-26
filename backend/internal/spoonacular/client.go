@@ -49,13 +49,23 @@ type metricMeasures struct {
 }
 
 type ingredient struct {
-	Name     string         `json:"name"`
-	Measures metricMeasures `json:"measures"`
+	ID        int64          `json:"id"`
+	Name      string         `json:"name"`
+	NameClean string         `json:"nameClean"`
+	Measures  metricMeasures `json:"measures"`
 }
 
 type recipeInformation struct {
 	ID                  int64        `json:"id"`
 	ExtendedIngredients []ingredient `json:"extendedIngredients"`
+}
+
+func displayName(ing ingredient) string {
+	if strings.TrimSpace(ing.NameClean) != "" {
+		return ing.NameClean
+	}
+
+	return ing.Name
 }
 
 func (c *Client) get(ctx context.Context, path string, params url.Values, target any) error {
@@ -110,7 +120,8 @@ func (c *Client) GetRandomRecipes(ctx context.Context, n int, preferences []stri
 		ingredients := make([]recipeclient.Ingredient, 0, len(r.ExtendedIngredients))
 		for _, ingr := range r.ExtendedIngredients {
 			ingredients = append(ingredients, recipeclient.Ingredient{
-				Name:   ingr.Name,
+				ID:     ingr.ID,
+				Name:   displayName(ingr),
 				Amount: ingr.Measures.Metric.Amount,
 				Unit:   ingr.Measures.Metric.UnitShort,
 			})
@@ -149,7 +160,8 @@ func (c *Client) GetRecipeInformationBulk(ctx context.Context, ids []int64) ([]r
 		ingredients := make([]recipeclient.Ingredient, len(r.ExtendedIngredients))
 		for j, ing := range r.ExtendedIngredients {
 			ingredients[j] = recipeclient.Ingredient{
-				Name:   ing.Name,
+				ID:     ing.ID,
+				Name:   displayName(ing),
 				Amount: ing.Measures.Metric.Amount,
 				Unit:   ing.Measures.Metric.UnitShort,
 			}
