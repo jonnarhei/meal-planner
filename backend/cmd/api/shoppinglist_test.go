@@ -188,18 +188,24 @@ func TestGenerateShoppingListFromPlanMixed(t *testing.T) {
 		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
 			return []recipeclient.RecipeWithIngredients{{
 				ID:          555,
-				Ingredients: []recipeclient.Ingredient{{Name: "flour", Amount: 100, Unit: "ml"}},
+				Ingredients: []recipeclient.Ingredient{{ID: flourID, Name: "flour", Amount: 100, Unit: "ml"}},
 			}}, nil
 		},
 		map[int64][]models.UserRecipeIngredient{
 			77: {{Name: "flour", Amount: 2, Unit: "cup"}},
 		})
 
-	if len(items) != 1 {
-		t.Fatalf("expected the two flours to merge into 1 item, got %d: %+v", len(items), items)
+	if len(items) != 2 {
+		t.Fatalf("expected an item from each source, got %d: %+v", len(items), items)
 	}
-	// 2 cups = 473.18 ml, plus the spoonacular 100 ml
-	assertAmount(t, items[0], 573.18, "ml")
+	for _, item := range items {
+		if item.IngredientID == nil {
+			// 2 cups = 473.18 ml
+			assertAmount(t, item, 473.18, "ml")
+			continue
+		}
+		assertAmount(t, item, 100, "ml")
+	}
 }
 
 func TestGenerateShoppingListFromPlanErrors(t *testing.T) {
@@ -277,4 +283,188 @@ func TestGenerateShoppingListFromPlanErrors(t *testing.T) {
 			t.Errorf("expected lookup for recipe 77, got %v", gotIDs)
 		}
 	})
+}
+
+// spoonacular ingredient ids: garlic is always 11215, whatever a recipe calls it
+const (
+	garlicID = 11215
+	flourID  = 20081
+	onionID  = 11282
+)
+
+func countItems(items []models.ShoppinglistItem, name string) int {
+	n := 0
+	for _, item := range items {
+		if item.Name == name {
+			n++
+		}
+	}
+	return n
+}
+
+func assertIngredientID(t *testing.T, item models.ShoppinglistItem, want int64) {
+	t.Helper()
+	if item.IngredientID == nil {
+		t.Fatalf("%s: expected ingredient id %d, got nil", item.Name, want)
+	}
+	if *item.IngredientID != want {
+		t.Errorf("%s: expected ingredient id %d, got %d", item.Name, want, *item.IngredientID)
+	}
+}
+
+func TestGenerateShoppingListAggregatesBySpoonacularID(t *testing.T) {
+	// the issue: two recipes naming the same ingredient differently
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{
+		spoonSlot(1, 555),
+		spoonSlot(2, 556),
+	}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{
+				{ID: 555, Ingredients: []recipeclient.Ingredient{
+					{ID: garlicID, Name: "garlic", Amount: 2, Unit: "clove"},
+				}},
+				{ID: 556, Ingredients: []recipeclient.Ingredient{
+					{ID: garlicID, Name: "garlic cloves", Amount: 3, Unit: "cloves"},
+				}},
+			}, nil
+		}, nil)
+
+	if len(items) != 1 {
+		t.Fatalf("expected the two garlics to merge on ingredient id, got %d: %+v", len(items), items)
+	}
+	assertAmount(t, items[0], 5, "clove")
+	assertIngredientID(t, items[0], garlicID)
+	if items[0].Name != "garlic" {
+		t.Errorf("expected the first name seen to win, got %q", items[0].Name)
+	}
+}
+
+func TestGenerateShoppingListKeepsDifferentIngredientIDsApart(t *testing.T) {
+	// spoonacular has several ingredients called "salt"; they are not the same thing
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{spoonSlot(1, 555)}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{{ID: 555, Ingredients: []recipeclient.Ingredient{
+				{ID: 1082047, Name: "salt", Amount: 5, Unit: "g"},
+				{ID: 1102047, Name: "salt", Amount: 10, Unit: "g"},
+			}}}, nil
+		}, nil)
+
+	if countItems(items, "salt") != 2 {
+		t.Fatalf("expected two distinct salts, got %+v", items)
+	}
+}
+
+func TestGenerateShoppingListFallsBackToNameWithoutID(t *testing.T) {
+	// spoonacular occasionally returns no id; those still have to merge on name
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{spoonSlot(1, 555)}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{{ID: 555, Ingredients: []recipeclient.Ingredient{
+				{Name: "flour", Amount: 100, Unit: "g"},
+				{Name: "flour", Amount: 50, Unit: "g"},
+			}}}, nil
+		}, nil)
+
+	if len(items) != 1 {
+		t.Fatalf("expected the id-less flours to merge on name, got %d: %+v", len(items), items)
+	}
+	assertAmount(t, items[0], 150, "g")
+	if items[0].IngredientID != nil {
+		t.Errorf("expected no ingredient id, got %d", *items[0].IngredientID)
+	}
+}
+
+func TestGenerateShoppingListDoesNotMergeIdentifiedWithUserIngredients(t *testing.T) {
+	// user recipes carry no spoonacular id, so they cannot match an identified
+	// ingredient even when the name and unit line up. accepted trade-off until
+	// user ingredients are resolved to spoonacular ids.
+	id := int64(77)
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{
+		spoonSlot(1, 555),
+		userRecipeSlot(2, &id),
+	}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{{ID: 555, Ingredients: []recipeclient.Ingredient{
+				{ID: flourID, Name: "flour", Amount: 100, Unit: "ml"},
+			}}}, nil
+		},
+		map[int64][]models.UserRecipeIngredient{
+			77: {{Name: "flour", Amount: 50, Unit: "ml"}},
+		})
+
+	if countItems(items, "flour") != 2 {
+		t.Fatalf("expected the identified and user flour to stay apart, got %+v", items)
+	}
+	for _, item := range items {
+		if item.Source != "meal_plan" {
+			t.Errorf("expected source meal_plan, got %q", item.Source)
+		}
+	}
+}
+
+func TestGenerateShoppingListKeepsSameIngredientInDifferentUnitsApart(t *testing.T) {
+	// no conversion exists between cloves and grams, so these cannot be summed
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{spoonSlot(1, 555)}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{{ID: 555, Ingredients: []recipeclient.Ingredient{
+				{ID: garlicID, Name: "garlic", Amount: 2, Unit: "clove"},
+				{ID: garlicID, Name: "garlic", Amount: 30, Unit: "g"},
+			}}}, nil
+		}, nil)
+
+	if len(items) != 2 {
+		t.Fatalf("expected cloves and grams to stay separate, got %+v", items)
+	}
+}
+
+func TestGenerateShoppingListDropsSizeUnitsBeforeAggregating(t *testing.T) {
+	// "2 large onions" and "1 onion" are the same shopping line
+	plan := &models.MealPlan{ID: 10, UserID: 7, Recipes: []models.MealPlanRecipe{spoonSlot(1, 555)}}
+
+	items := runGenerate(t, plan,
+		func(ctx context.Context, ids []int64) ([]recipeclient.RecipeWithIngredients, error) {
+			return []recipeclient.RecipeWithIngredients{{ID: 555, Ingredients: []recipeclient.Ingredient{
+				{ID: onionID, Name: "onion", Amount: 2, Unit: "large"},
+				{ID: onionID, Name: "onion", Amount: 1, Unit: ""},
+			}}}, nil
+		}, nil)
+
+	if len(items) != 1 {
+		t.Fatalf("expected the size unit to be dropped and the onions merged, got %+v", items)
+	}
+	assertAmount(t, items[0], 3, "")
+}
+
+func TestIsValidUnit(t *testing.T) {
+	cases := map[string]bool{
+		"g": true, "cup": true, "": true,
+		"serving": false, "servings": false, "  SERVINGS  ": false,
+	}
+	for unit, want := range cases {
+		if got := isValidUnit(unit); got != want {
+			t.Errorf("isValidUnit(%q) = %v, want %v", unit, got, want)
+		}
+	}
+}
+
+func TestIsValidWholeItem(t *testing.T) {
+	cases := map[string]bool{
+		"clove": true, "g": true, "": true,
+		"large": false, "medium": false, "small": false,
+		"larges": false, "mediums": false, "smalls": false, " Large ": false,
+	}
+	for item, want := range cases {
+		if got := isValidWholeItem(item); got != want {
+			t.Errorf("isValidWholeItem(%q) = %v, want %v", item, got, want)
+		}
+	}
 }

@@ -13,6 +13,20 @@ type ShoppinglistStore struct {
 	db *sql.DB
 }
 
+// one ($1, $2, ...) group per item, plus the arguments to bind to them
+func buildInsertValues(items []models.ShoppinglistItem) (string, []any) {
+	valueStrings := make([]string, len(items))
+	valueArgs := make([]any, 0, len(items)*6)
+
+	for i, item := range items {
+		n := i * 6
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", n+1, n+2, n+3, n+4, n+5, n+6)
+		valueArgs = append(valueArgs, item.UserID, item.IngredientID, item.Name, item.Amount, item.Unit, item.Source)
+	}
+
+	return strings.Join(valueStrings, ","), valueArgs
+}
+
 func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []models.ShoppinglistItem) error {
 	if len(items) == 0 {
 		return nil
@@ -24,20 +38,14 @@ func (s *ShoppinglistStore) AddItems(ctx context.Context, userID int64, items []
 	}
 	defer tx.Rollback()
 
-	valueStrings := make([]string, len(items))
-	valueArgs := make([]interface{}, 0, len(items)*6)
-
-	for i, item := range items {
-		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", (i*6)+1, (i*6)+2, (i*6)+3, (i*6)+4, (i*6)+5, (i*6)+6)
-		valueArgs = append(valueArgs, item.UserID, item.IngredientID, item.Name, item.Amount, item.Unit, item.Source)
-	}
+	values, valueArgs := buildInsertValues(items)
 
 	query := fmt.Sprintf(`
 	INSERT INTO shopping_list_items (user_id, ingredient_id, name, amount, unit, source)
 	VALUES %s
 	ON CONFLICT (user_id, agg_key, unit)
 	DO UPDATE SET amount = shopping_list_items.amount + EXCLUDED.amount, name = LEAST(shopping_list_items.name, EXCLUDED.name)
-	`, strings.Join(valueStrings, ","))
+	`, values)
 
 	_, err = tx.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
