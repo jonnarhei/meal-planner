@@ -54,6 +54,7 @@ export const INTOLERANCE_OPTIONS = [
 export interface ShoppingListItem {
     id: number
     user_id: number
+    ingredient_id: number | null
     name: string
     amount: number
     unit: string
