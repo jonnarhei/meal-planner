@@ -259,7 +259,7 @@ function MealPlanPage() {
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-1 -mx-2">
+                <div className="flex flex-col">
                     {recipes.map(recipe => {
                         const date = dateForDay(recipe.day)
                         const isToday = recipe.day === todayDay
@@ -269,10 +269,12 @@ function MealPlanPage() {
                             <button
                                 key={recipe.day}
                                 onClick={() => openDay(recipe.day)}
-                                className={`grid grid-cols-[40px_48px_minmax(0,1fr)_14px] gap-3 items-center text-left p-2.5 min-h-12 rounded-[14px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300
+                                className={`grid grid-cols-[40px_48px_minmax(0,1fr)_14px] gap-3 items-center text-left py-2.5 min-h-12 border-b border-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-300
                                     ${isToday
-                                        ? 'bg-orange-50 border-orange-300'
-                                        : 'border-transparent active:bg-orange-50'
+                                        // Full-bleed band: cancel main's px-5 so today's row runs edge to edge,
+                                        // then pad back to the other rows' px-0.5 inset so the columns line up.
+                                        ? 'bg-orange-50 -mx-5 px-[22px]'
+                                        : 'px-0.5 active:bg-orange-50'
                                     }`}
                             >
                                 <div className="flex flex-col items-center">
