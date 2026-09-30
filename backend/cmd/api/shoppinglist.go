@@ -172,6 +172,20 @@ func appendIngredient(items []models.ShoppinglistItem, userID int64, ingredientI
 	return items
 }
 
+func canonicalIngredientID(id int64) int64 {
+	digits := strconv.FormatInt(id, 10)
+	if len(digits) < 7 || !strings.HasPrefix(digits, "10") {
+		return id
+	}
+
+	base, err := strconv.ParseInt(digits[3:], 10, 64)
+	if err != nil || base == 0 {
+		return id
+	}
+
+	return base
+}
+
 func (app *application) generateShoppingListFromPlan(ctx context.Context, userID int64, plan *models.MealPlan) error {
 	var spoonIDs, userRecipeIDs []int64
 	for _, recipe := range plan.Recipes {
@@ -201,7 +215,7 @@ func (app *application) generateShoppingListFromPlan(ctx context.Context, userID
 				}
 				var ingredientID *int64
 				if ingredient.ID != 0 {
-					id := ingredient.ID
+					id := canonicalIngredientID(ingredient.ID)
 					ingredientID = &id
 				}
 				items = appendIngredient(items, userID, ingredientID, ingredient.Name, ingredient.Amount, ingredient.Unit)
