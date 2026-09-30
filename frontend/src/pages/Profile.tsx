@@ -5,6 +5,7 @@ import { updatePreferences } from "../api/user"
 import toast from "react-hot-toast"
 import { useAppLayout } from "../components/AppLayout"
 import PreferencesForm, { emptyPreferences, type Preferences } from "../components/PreferencesForm"
+import MobileHeader from "../components/MobileHeader"
 
 const countLabel = (count: number, singular: string) =>
     `${count} ${singular}${count === 1 ? '' : 's'}`
@@ -65,7 +66,10 @@ function Profile() {
     }
 
     return (
-        <div className="grid grid-cols-[300px_minmax(0,640px)] gap-8 items-start">
+        <>
+        <MobileHeader title="Profile" action={null} />
+
+        <div className="grid lg:grid-cols-[300px_minmax(0,640px)] gap-6 lg:gap-8 items-start">
 
             {/* Account */}
             <div className="border border-stone-200 rounded-[20px] p-6 flex flex-col gap-[18px]">
@@ -87,7 +91,7 @@ function Profile() {
 
                 <button
                     onClick={handleLogout}
-                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold py-2.5 rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    className="w-full min-h-11 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold py-2.5 rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                 >
                     Sign out
                 </button>
@@ -108,13 +112,14 @@ function Profile() {
                     <button
                         onClick={handleSave}
                         disabled={saving || userLoading}
-                        className="bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold px-[22px] py-[11px] rounded-[10px] transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                        className="w-full md:w-auto min-h-11 bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold px-[22px] py-[11px] rounded-[10px] transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                     >
                         {saving ? 'Saving…' : 'Save preferences'}
                     </button>
                 </div>
             </div>
         </div>
+        </>
     )
 }
 

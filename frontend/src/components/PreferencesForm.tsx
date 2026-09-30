@@ -110,12 +110,12 @@ function PreferencesForm({ value, onChange, variant = 'profile' }: Props) {
                                 addIngredient()
                             }
                         }}
-                        className="flex-1 min-w-0 border-none px-2.5 py-2 text-[15px] outline-none"
+                        className="flex-1 min-w-0 border-none px-2.5 py-2 text-base md:text-[15px] outline-none"
                     />
                     <button
                         type="button"
                         onClick={addIngredient}
-                        className="bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold px-4 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                        className="min-h-11 md:min-h-0 bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold px-4 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                     >
                         Add
                     </button>
@@ -133,7 +133,7 @@ function PreferencesForm({ value, onChange, variant = 'profile' }: Props) {
                                     type="button"
                                     onClick={() => removeIngredient(ingredient)}
                                     aria-label={`Remove ${ingredient}`}
-                                    className="text-stone-400 hover:text-red-600 text-base leading-none px-1 transition-colors"
+                                    className="w-7 h-7 -my-1 flex items-center justify-center text-stone-400 hover:text-red-600 text-base leading-none transition-colors"
                                 >
                                     ×
                                 </button>

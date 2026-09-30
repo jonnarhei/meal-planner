@@ -31,7 +31,7 @@ function App() {
           <AppLayout />
         </ProtectedRoute>
       }>
-        <Route path="/meal-plan" element={<MealPlanPage />} />
+        <Route path="/meal-plan/:day?" element={<MealPlanPage />} />
 
         <Route path="/profile" element={<Profile />} />
 

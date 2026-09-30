@@ -5,6 +5,7 @@ import { deleteRecipe, getRecipes } from "../api/recipes";
 import toast from "react-hot-toast";
 import RecipeThumb from "../components/RecipeThumb";
 import EmptyState from "../components/EmptyState";
+import MobileHeader from "../components/MobileHeader";
 
 const columns = "grid grid-cols-[minmax(0,1fr)_140px_110px_150px] gap-4 px-5"
 
@@ -46,9 +47,16 @@ function MyRecipes() {
         }
     }
 
-    if (loading) return <RecipesSkeleton />
+    if (loading) return (
+        <>
+            <MobileHeader title="Recipes" />
+            <RecipesSkeleton />
+        </>
+    )
 
     if (recipes.length === 0) return (
+        <>
+        <MobileHeader title="Recipes" />
         <EmptyState
             visual={
                 <RecipeThumb stripe={6} className="w-[72px] h-[72px] rounded-2xl" />
@@ -58,14 +66,22 @@ function MyRecipes() {
             actionLabel="Add your first recipe"
             onAction={() => navigate('/recipes/new')}
         />
+        </>
     )
 
     const visible = recipes.filter(recipe =>
         recipe.title.toLowerCase().includes(query.trim().toLowerCase())
     )
 
+    const noMatches = (
+        <p className="px-1 md:px-5 py-6 text-sm text-stone-500">
+            No recipes match "{query.trim()}".
+        </p>
+    )
+
     return (
         <div className="max-w-[920px] flex flex-col gap-4">
+            <MobileHeader title="Recipes" />
 
             <div className="flex gap-2.5">
                 <input
@@ -73,17 +89,57 @@ function MyRecipes() {
                     placeholder="Search recipes"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    className="flex-1 border border-stone-200 rounded-[10px] bg-stone-50 px-3.5 py-2.5 text-[15px] outline-none transition-colors focus:border-orange-400"
+                    className="flex-1 min-w-0 border border-stone-200 rounded-[10px] bg-stone-50 px-3.5 py-2.5 text-base md:text-[15px] outline-none transition-colors focus:border-orange-400"
                 />
                 <button
                     onClick={() => navigate('/recipes/new')}
-                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-[18px] rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    className="flex-none min-h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-[18px] rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                 >
                     New recipe
                 </button>
             </div>
 
-            <div className="border border-stone-200 rounded-[14px] overflow-hidden">
+            {/* Mobile: list rows instead of the table */}
+            <div className="md:hidden flex flex-col">
+                {visible.length === 0 ? noMatches : visible.map(recipe => {
+                    const ingredientCount = recipe.ingredients?.length ?? 0
+                    const meta = [
+                        ingredientCount === 0 ? 'No ingredients' : `${ingredientCount} ingredient${ingredientCount === 1 ? '' : 's'}`,
+                        recipe.servings > 0 && `${recipe.servings} servings`,
+                    ].filter(Boolean).join(' · ')
+
+                    return (
+                        <div key={recipe.id} className="flex items-center gap-3 py-2.5 border-b border-stone-100">
+                            <RecipeThumb
+                                src={recipe.image}
+                                alt=""
+                                className="w-12 h-12 flex-none rounded-[10px]"
+                            />
+                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <span className="text-[15px] font-semibold truncate">{recipe.title}</span>
+                                <span className="text-xs text-stone-500">{meta}</span>
+                            </div>
+                            <div className="flex-none flex">
+                                <button
+                                    onClick={() => navigate(`/recipes/${recipe.id}/edit`)}
+                                    className="min-h-11 text-sm font-semibold text-orange-700 active:bg-orange-50 rounded-lg px-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(recipe)}
+                                    disabled={deletingId === recipe.id}
+                                    className="min-h-11 text-sm text-red-600 active:bg-red-50 rounded-lg px-2.5 transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                                >
+                                    {deletingId === recipe.id ? '...' : 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            <div className="hidden md:block border border-stone-200 rounded-[14px] overflow-hidden">
                 <div className={`${columns} py-2.5 bg-stone-50 text-xs font-semibold uppercase tracking-[0.04em] text-stone-500`}>
                     <span>Recipe</span>
                     <span>Ingredients</span>
@@ -147,10 +203,22 @@ function RecipesSkeleton() {
         <div className="max-w-[920px] flex flex-col gap-4 animate-pulse">
             <div className="flex gap-2.5">
                 <div className="flex-1 h-[42px] rounded-[10px] bg-stone-100" />
-                <div className="w-[120px] h-[42px] rounded-[10px] bg-stone-100" />
+                <div className="w-[110px] h-[44px] rounded-[10px] bg-stone-100" />
             </div>
 
-            <div className="border border-stone-200 rounded-[14px] overflow-hidden">
+            <div className="md:hidden flex flex-col">
+                {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-stone-100">
+                        <div className="w-12 h-12 flex-none rounded-[10px] bg-stone-100" />
+                        <div className="flex-1 flex flex-col gap-1.5">
+                            <div className="h-[11px] w-[60%] rounded-md bg-stone-100" />
+                            <div className="h-[9px] w-[40%] rounded-md bg-stone-50" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="hidden md:block border border-stone-200 rounded-[14px] overflow-hidden">
                 <div className="h-[38px] bg-stone-50" />
                 {Array.from({ length: 5 }, (_, i) => (
                     <div key={i} className={`${columns} py-2.5 items-center border-t border-stone-100`}>

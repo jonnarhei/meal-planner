@@ -3,10 +3,11 @@ import type { UserRecipe, MealPlan, MealPlanRecipe } from "../api/types"
 import { changeRecipeForDay, getCurrentMealPlan, regenerateMealPlan } from "../api/mealplan"
 import toast from "react-hot-toast"
 import { getRecipes } from "../api/recipes"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { useAppLayout } from "../components/AppLayout"
 import RecipeThumb from "../components/RecipeThumb"
 import EmptyState from "../components/EmptyState"
+import MobileHeader from "../components/MobileHeader"
 
 /** The API sends dates as RFC3339. Read the calendar day only, so the local timezone can't shift it. */
 const parseApiDate = (value: string) => {
@@ -51,10 +52,23 @@ function MealPlanPage() {
     const [pickerDay, setPickerDay] = useState<number | null>(null)
     const [myRecipes, setMyRecipes] = useState<UserRecipe[] | null>(null)
     const [loadingRecipes, setLoadingRecipes] = useState(false)
-    const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
     const navigate = useNavigate()
+    const location = useLocation()
     const { setWeekLabel } = useAppLayout()
+
+    // The selected day lives in the URL (/meal-plan/:day). On desktop it picks the detail
+    // panel; on mobile it opens the day view, so the back button returns to the week.
+    const { day: dayParam } = useParams()
+    const routeDay = dayParam !== undefined && /^[1-7]$/.test(dayParam) ? Number(dayParam) : null
+
+    const selectDay = (day: number) => navigate(`/meal-plan/${day}`, { replace: true })
+    const openDay = (day: number) => navigate(`/meal-plan/${day}`)
+    const closeDay = () => {
+        // Go back when we came from the week, otherwise (deep link) swap the URL in place.
+        if (location.key !== 'default') navigate(-1)
+        else navigate('/meal-plan', { replace: true })
+    }
 
     useEffect(() => {
         const fetchMealPlan = async () => {
@@ -110,7 +124,7 @@ function MealPlanPage() {
         try {
             const newMealPlan = await regenerateMealPlan()
             setMealPlan(newMealPlan)
-            setSelectedDay(null)
+            if (routeDay !== null) navigate('/meal-plan', { replace: true })
         } catch (err) {
             toast.error('Failed to regenerate the meal plan')
         } finally {
@@ -153,8 +167,10 @@ function MealPlanPage() {
         return offset >= 0 && offset < 7 ? offset + 1 : 1
     })()
 
-    const activeDay = selectedDay ?? todayDay
+    const activeDay = routeDay ?? todayDay
     const selected = recipes.find(r => r.day === activeDay) ?? recipes[0] ?? null
+    /** Mobile only: the day view is open when the URL names a day we have a dinner for. */
+    const mobileDay = routeDay !== null && selected?.day === routeDay ? selected : null
 
     /** "3 ingredients - 4 servings" for recipes we own. Unknown for Spoonacular ones. */
     const metaFor = (recipe: MealPlanRecipe) => {
@@ -171,9 +187,16 @@ function MealPlanPage() {
 
     const busy = selected !== null && changingDay === selected.day
 
-    if (loading) return <MealPlanSkeleton />
+    if (loading) return (
+        <>
+            <MobileHeader title="Meal plan" />
+            <MealPlanSkeleton />
+        </>
+    )
 
     if (!mealPlan || recipes.length === 0) return (
+        <>
+        <MobileHeader title="Meal plan" />
         <EmptyState
             visual={
                 <div className="grid grid-cols-7 gap-[5px]">
@@ -194,11 +217,174 @@ function MealPlanPage() {
             onAction={handleRegenerate}
             busy={regenerating}
         />
+        </>
     )
 
     return (
         <>
-            <div className="grid grid-cols-[400px_minmax(0,1fr)] gap-7 items-start">
+            {/* Mobile: week (2h) */}
+            <div className="md:hidden flex flex-col">
+                <MobileHeader title="Meal plan" />
+
+                {weekLabel && (
+                    <div className="flex items-center justify-between bg-stone-100 rounded-[10px] p-1">
+                        <button
+                            disabled
+                            aria-label="Previous week"
+                            className="w-9 h-9 rounded-[7px] text-lg text-stone-600 disabled:cursor-default"
+                        >
+                            ‹
+                        </button>
+                        <span className="text-sm font-semibold">{weekLabel}</span>
+                        <button
+                            disabled
+                            aria-label="Next week"
+                            className="w-9 h-9 rounded-[7px] text-lg text-stone-600 disabled:cursor-default"
+                        >
+                            ›
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex items-center justify-between px-1 pt-3 pb-1">
+                    <span className="text-[13px] font-semibold text-stone-500">
+                        {recipes.length} dinner{recipes.length === 1 ? '' : 's'}
+                    </span>
+                    <button
+                        onClick={handleRegenerate}
+                        disabled={regenerating}
+                        className="text-[13px] font-semibold text-orange-700 min-h-11 rounded transition-colors hover:text-orange-800 disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    >
+                        {regenerating ? 'Generating…' : 'New meal plan'}
+                    </button>
+                </div>
+
+                <div className="flex flex-col">
+                    {recipes.map(recipe => {
+                        const date = dateForDay(recipe.day)
+                        const isToday = recipe.day === todayDay
+                        const meta = metaFor(recipe)
+
+                        return (
+                            <button
+                                key={recipe.day}
+                                onClick={() => openDay(recipe.day)}
+                                className={`grid grid-cols-[40px_48px_minmax(0,1fr)_14px] gap-3 items-center text-left py-2.5 min-h-12 border-b border-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-300
+                                    ${isToday
+                                        // Full-bleed band: cancel main's px-5 so today's row runs edge to edge,
+                                        // then pad back to the other rows' px-0.5 inset so the columns line up.
+                                        ? 'bg-orange-50 -mx-5 px-[22px]'
+                                        : 'px-0.5 active:bg-orange-50'
+                                    }`}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <span className={`text-[11px] font-bold uppercase tracking-[0.06em] ${isToday ? 'text-orange-600' : 'text-stone-400'}`}>
+                                        {shortDay(date)}
+                                    </span>
+                                    <span className="text-lg font-bold text-stone-900">{date.getDate()}</span>
+                                </div>
+
+                                <RecipeThumb
+                                    src={recipe.image}
+                                    alt=""
+                                    className="w-12 h-12 rounded-[10px]"
+                                />
+
+                                <div className="flex flex-col gap-0.5 min-w-0">
+                                    <span className="text-[15px] font-semibold text-stone-900 truncate">
+                                        {recipe.recipe_title}
+                                    </span>
+                                    {meta && <span className="text-xs text-stone-500">{meta}</span>}
+                                </div>
+
+                                <span className="text-lg text-stone-300">›</span>
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Mobile: day (2i). Covers the tab bar so the change buttons can sit at the bottom. */}
+            {mobileDay && (
+                <div className="md:hidden fixed inset-0 z-40 bg-white flex flex-col text-stone-900">
+                    <div className="flex-1 overflow-auto">
+                        <div className="relative h-[300px]">
+                            <RecipeThumb
+                                src={mobileDay.image}
+                                alt={mobileDay.recipe_title}
+                                stripe={10}
+                                className="absolute inset-0 w-full h-full"
+                            />
+                            <button
+                                onClick={closeDay}
+                                className="absolute left-4 top-[max(24px,env(safe-area-inset-top))] min-h-11 bg-white rounded-full px-4 text-sm font-semibold text-stone-900 shadow-[0_1px_3px_rgba(0,0,0,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                            >
+                                ‹ Week
+                            </button>
+                        </div>
+
+                        <div className="px-5 py-[22px] flex flex-col gap-3">
+                            <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-orange-500">
+                                {longDay(dateForDay(mobileDay.day))} · {dateForDay(mobileDay.day).getDate()} {shortMonth(dateForDay(mobileDay.day))}
+                                {mobileDay.day === todayDay && ' · Today'}
+                            </span>
+
+                            {busy ? (
+                                <div className="h-8 w-3/4 rounded-md bg-stone-100" />
+                            ) : (
+                                <h2 className="text-[28px] font-bold tracking-[-0.01em] leading-[1.15]">
+                                    {mobileDay.recipe_title}
+                                </h2>
+                            )}
+
+                            {(mobileDay.source === 'user' || metaFor(mobileDay)) && (
+                                <div className="flex flex-wrap items-center gap-2.5 text-sm text-stone-600">
+                                    {mobileDay.source === 'user' && (
+                                        <span className="bg-orange-100 text-orange-700 rounded-full px-2.5 py-0.5 text-[13px] font-medium">
+                                            my recipe
+                                        </span>
+                                    )}
+                                    <span>{metaFor(mobileDay)}</span>
+                                </div>
+                            )}
+
+                            {mobileDay.source_url && (
+                                <a
+                                    href={mobileDay.source_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-fit py-2.5 text-sm font-semibold text-orange-700 hover:text-orange-800 transition-colors"
+                                >
+                                    View recipe
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex-none px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-3">
+                        <span className="text-[13px] text-stone-500">Change this dinner</span>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <button
+                                onClick={() => handleRecipeChange(mobileDay.day)}
+                                disabled={busy}
+                                className={`bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold py-3.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${busy ? 'opacity-55' : ''}`}
+                            >
+                                {busy ? 'Finding a dinner…' : 'Surprise me'}
+                            </button>
+                            <button
+                                onClick={() => openPicker(mobileDay.day)}
+                                disabled={busy}
+                                className={`bg-orange-100 hover:bg-orange-200 text-orange-700 text-[15px] font-semibold py-3.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${busy ? 'opacity-55' : ''}`}
+                            >
+                                Use my own
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop: week list + detail panel (1c) */}
+            <div className="hidden md:grid grid-cols-[400px_minmax(0,1fr)] gap-7 items-start">
 
                 {/* Week list */}
                 <div className="flex flex-col gap-1">
@@ -224,7 +410,7 @@ function MealPlanPage() {
                         return (
                             <button
                                 key={recipe.day}
-                                onClick={() => setSelectedDay(recipe.day)}
+                                onClick={() => selectDay(recipe.day)}
                                 className={`grid grid-cols-[44px_40px_minmax(0,1fr)] gap-3.5 items-center text-left px-3 py-2.5 rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300
                                     ${isSelected
                                         ? 'bg-orange-50 border-orange-300'
@@ -327,7 +513,7 @@ function MealPlanPage() {
 
             {pickerDay !== null && (
                 <div
-                    className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-6"
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4 md:px-6"
                     onClick={() => setPickerDay(null)}
                 >
                     <div
@@ -341,7 +527,7 @@ function MealPlanPage() {
                             <button
                                 onClick={() => setPickerDay(null)}
                                 aria-label="Close"
-                                className="text-stone-300 hover:text-red-600 text-xl leading-none transition-colors"
+                                className="w-11 h-11 -m-3 flex items-center justify-center text-stone-300 hover:text-red-600 text-xl leading-none transition-colors"
                             >
                                 ×
                             </button>
@@ -390,7 +576,7 @@ const skeletonWidths = ['70%', '55%', '80%', '60%', '75%', '50%']
 
 function MealPlanSkeleton() {
     return (
-        <div className="grid grid-cols-[400px_minmax(0,1fr)] gap-7 items-start animate-pulse">
+        <div className="grid md:grid-cols-[400px_minmax(0,1fr)] gap-7 items-start animate-pulse">
             <div className="flex flex-col gap-2.5">
                 <div className="h-3 w-[70px] rounded-md bg-stone-100 mx-1 mb-2" />
 
@@ -405,7 +591,7 @@ function MealPlanSkeleton() {
                 ))}
             </div>
 
-            <div className="border border-stone-100 rounded-2xl overflow-hidden flex flex-col">
+            <div className="hidden md:flex border border-stone-100 rounded-2xl overflow-hidden flex-col">
                 <div className="h-[140px] bg-stone-50" />
                 <div className="p-[18px] flex flex-col gap-2.5">
                     <div className="h-2.5 w-[90px] rounded-md bg-orange-100" />

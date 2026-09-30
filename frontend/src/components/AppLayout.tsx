@@ -62,9 +62,9 @@ function AppLayout() {
     const initial = user?.email?.[0]?.toUpperCase() ?? '·'
 
     return (
-        <div className="h-screen flex flex-col bg-white text-stone-900">
+        <div className="h-dvh flex flex-col bg-white text-stone-900">
 
-            <header className="h-[68px] flex-none flex items-center justify-between px-7 bg-white border-b border-stone-200">
+            <header className="hidden md:flex h-[68px] flex-none items-center justify-between px-7 bg-white border-b border-stone-200">
                 <div className="flex items-center gap-3.5">
                     <span className="w-2.5 h-2.5 rounded-[3px] bg-orange-500" />
                     <h1 className="text-[22px] font-bold tracking-[-0.01em]">{pageTitle(pathname)}</h1>
@@ -106,7 +106,7 @@ function AppLayout() {
             </header>
 
             <div className="flex-1 flex min-h-0">
-                <aside className="w-[210px] flex-none px-3 py-5 flex flex-col gap-1 bg-orange-50">
+                <aside className="hidden md:flex w-[210px] flex-none px-3 py-5 flex-col gap-1 bg-orange-50">
                     {navItems.map(item => (
                         <NavLink
                             key={item.to}
@@ -131,10 +131,31 @@ function AppLayout() {
                     </button>
                 </aside>
 
-                <main className="flex-1 overflow-auto bg-white py-7 px-8">
+                <main className="flex-1 overflow-auto bg-white px-5 pt-7 pb-8 md:py-7 md:px-8">
                     <Outlet context={{ user, userLoading, setUser, setWeekLabel } satisfies AppLayoutContext} />
                 </main>
             </div>
+
+            {/* Mobile tab bar */}
+            <nav className="md:hidden flex-none grid grid-cols-3 bg-white border-t border-stone-200 px-2 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
+                {navItems.map(item => (
+                    <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className={({ isActive }) =>
+                            `flex flex-col items-center gap-[5px] p-1.5 min-h-[44px] rounded-[10px] text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300
+                            ${isActive ? 'text-orange-700 font-bold' : 'text-stone-500 font-medium'}`
+                        }
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <span className={`w-5 h-1 rounded-sm ${isActive ? 'bg-orange-500' : 'bg-transparent'}`} />
+                                {item.label}
+                            </>
+                        )}
+                    </NavLink>
+                ))}
+            </nav>
         </div>
     )
 }
