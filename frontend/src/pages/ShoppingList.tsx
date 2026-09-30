@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ShoppingListItem } from "../api/types";
 import { addFromMealPlan, addItems, deleteChecked, deleteItem, getShoppingList, toggleChecked } from "../api/shoppinglist";
 import toast from "react-hot-toast";
+import MobileHeader from "../components/MobileHeader";
 
 function ShoppingList() {
     const [items, setItems] = useState<ShoppingListItem[]>([])
@@ -111,10 +112,116 @@ function ShoppingList() {
     const toBuy = items.filter(item => !item.checked).sort(byName)
     const basket = items.filter(item => item.checked).sort(byName)
 
-    if (loading) return <ShoppingListSkeleton />
+    if (loading) return (
+        <>
+            <MobileHeader title="Shopping list" action={null} />
+            <ShoppingListSkeleton />
+        </>
+    )
+
+    const nothingToBuy = (
+        <div className="border-[1.5px] border-dashed border-orange-200 rounded-[14px] flex flex-col items-center justify-center gap-2 text-center p-8">
+            <span className="text-[15px] font-semibold">Nothing left to buy</span>
+            <span className="text-[13px] text-stone-500">Pull ingredients from this week's dinners.</span>
+            <button
+                onClick={handleAddFromMealPlan}
+                disabled={addingFromPlan}
+                className="mt-1 min-h-11 bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+            >
+                {addingFromPlan ? 'Updating…' : 'Update from meal plan'}
+            </button>
+        </div>
+    )
 
     return (
-        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-7 items-start">
+        <>
+        {/* Mobile (2j) */}
+        <div className="md:hidden flex flex-col">
+            <MobileHeader
+                title="Shopping list"
+                action={
+                    <button
+                        onClick={handleAddFromMealPlan}
+                        disabled={addingFromPlan}
+                        className="min-h-11 text-sm font-semibold text-orange-700 rounded transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    >
+                        {addingFromPlan ? 'Updating…' : 'Update'}
+                    </button>
+                }
+            />
+
+            <form
+                onSubmit={e => { e.preventDefault(); handleAddItem() }}
+                className="flex gap-1.5 border border-stone-200 rounded-xl p-[5px] mb-2"
+            >
+                <input
+                    type="text"
+                    placeholder="Add item"
+                    value={newItem.name}
+                    onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                    className="flex-1 min-w-0 border-none p-2.5 text-base outline-none"
+                />
+                <button
+                    type="submit"
+                    className="min-h-11 bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold px-[18px] rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                >
+                    Add
+                </button>
+            </form>
+
+            {toBuy.length === 0 ? nothingToBuy : toBuy.map(item => (
+                <div key={item.id} className="flex items-center border-b border-stone-100">
+                    <button
+                        onClick={() => handleToggle(item.id)}
+                        aria-label={`Tick off ${item.name}`}
+                        className="flex-1 min-w-0 flex items-center gap-3.5 px-0.5 min-h-[52px] text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    >
+                        <span className="w-6 h-6 flex-none rounded-[7px] border-[1.5px] border-stone-300 bg-white" />
+                        <span className="text-base capitalize truncate">{item.name}</span>
+                        <span className="text-sm text-stone-500 flex-none">{quantity(item)}</span>
+                    </button>
+                    <button
+                        onClick={() => handleDelete(item.id)}
+                        aria-label={`Remove ${item.name}`}
+                        className="w-11 h-11 -mr-2.5 flex-none flex items-center justify-center text-stone-300 hover:text-red-600 text-lg leading-none transition-colors"
+                    >
+                        ×
+                    </button>
+                </div>
+            ))}
+
+            <div className="flex items-center justify-between px-0.5 pt-[22px] pb-1.5">
+                <span className="text-sm font-bold text-stone-600">In the basket · {basket.length}</span>
+                {basket.length > 0 && (
+                    <button
+                        onClick={handleDeleteChecked}
+                        className="min-h-11 text-sm text-red-600 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    >
+                        Clear
+                    </button>
+                )}
+            </div>
+
+            {basket.length === 0 ? (
+                <span className="px-0.5 text-[13px] text-stone-400">Items you tick off land here.</span>
+            ) : basket.map(item => (
+                <button
+                    key={item.id}
+                    onClick={() => handleToggle(item.id)}
+                    aria-label={`Put ${item.name} back on the list`}
+                    className="flex items-center gap-3.5 px-0.5 min-h-12 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                >
+                    <span className="w-6 h-6 flex-none rounded-[7px] bg-orange-500 text-white text-[13px] font-bold flex items-center justify-center">
+                        ✓
+                    </span>
+                    <span className="text-[15px] text-stone-400 line-through capitalize truncate">{item.name}</span>
+                    <span className="text-[13px] text-stone-400 flex-none">{quantity(item)}</span>
+                </button>
+            ))}
+        </div>
+
+        {/* Desktop (1c) */}
+        <div className="hidden md:grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-7 items-start">
 
             {/* To buy */}
             <div className="flex flex-col gap-3">
@@ -166,19 +273,7 @@ function ShoppingList() {
                     </button>
                 </form>
 
-                {toBuy.length === 0 ? (
-                    <div className="border-[1.5px] border-dashed border-orange-200 rounded-[14px] flex flex-col items-center justify-center gap-2 text-center p-8">
-                        <span className="text-[15px] font-semibold">Nothing left to buy</span>
-                        <span className="text-[13px] text-stone-500">Pull ingredients from this week's dinners.</span>
-                        <button
-                            onClick={handleAddFromMealPlan}
-                            disabled={addingFromPlan}
-                            className="mt-1 bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
-                        >
-                            {addingFromPlan ? 'Updating…' : 'Update from meal plan'}
-                        </button>
-                    </div>
-                ) : (
+                {toBuy.length === 0 ? nothingToBuy : (
                     <div className="flex flex-col">
                         {toBuy.map(item => (
                             <div key={item.id} className="flex items-center gap-3 px-1 py-[11px] border-b border-stone-100">
@@ -243,12 +338,13 @@ function ShoppingList() {
                 )}
             </div>
         </div>
+        </>
     )
 }
 
 function ShoppingListSkeleton() {
     return (
-        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-7 items-start animate-pulse">
+        <div className="grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-7 items-start animate-pulse">
             <div className="flex flex-col gap-3">
                 <div className="h-4 w-[90px] rounded-md bg-stone-100" />
                 <div className="h-[50px] rounded-xl bg-stone-100" />

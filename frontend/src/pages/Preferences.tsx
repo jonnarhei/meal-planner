@@ -25,13 +25,13 @@ function DietaryPreferences() {
     return (
         <div className="min-h-screen bg-orange-50 flex flex-col text-stone-900">
 
-            <div className="flex items-center gap-2.5 px-8 py-6">
+            <div className="flex items-center gap-2.5 px-5 md:px-8 py-5 md:py-6">
                 <span className="w-2.5 h-2.5 rounded-[3px] bg-orange-500" />
                 <span className="text-base font-bold">Meal Planner</span>
             </div>
 
-            <div className="flex-1 flex justify-center px-8 pb-8">
-                <div className="w-full max-w-[520px] self-start bg-white border border-orange-200 rounded-3xl p-8 flex flex-col gap-6">
+            <div className="flex-1 flex justify-center px-4 md:px-8 pb-[max(32px,env(safe-area-inset-bottom))] md:pb-8">
+                <div className="w-full max-w-[520px] self-start bg-white border border-orange-200 rounded-3xl p-6 md:p-8 flex flex-col gap-6">
                     <div className="flex flex-col gap-1.5">
                         <span className="text-[26px] font-bold tracking-[-0.01em]">How do you eat?</span>
                         <span className="text-sm text-stone-500">
@@ -56,7 +56,7 @@ function DietaryPreferences() {
 
                         <button
                             onClick={() => navigate('/meal-plan')}
-                            className="w-full text-sm text-stone-500 hover:text-stone-900 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 rounded-lg"
+                            className="w-full min-h-11 text-sm text-stone-500 hover:text-stone-900 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 rounded-lg"
                         >
                             Skip for now
                         </button>
